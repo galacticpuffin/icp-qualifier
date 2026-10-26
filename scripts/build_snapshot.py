@@ -31,7 +31,9 @@ W = ROOT / "icpq/web"
 html = (W / "master.html").read_text()
 body = html.split('<div class="wrap">', 1)[1].split('<script src=')[0]
 body = body.replace('<nav class="nav" id="nav" aria-label="Main"></nav>',
-                    '<p class="snapnote">ICP Qualifier dashboard. This view is read-only. Set up your ICP, upload your list and run research in the app (http://localhost:8890); your results appear here once you publish a new snapshot.</p>')
+                    '<p class="snapnote">ICP Qualifier dashboard. This view is read-only. Set up your ICP, upload your list and run research in the app: <a href="http://100.95.173.65:8890" target="_blank" rel="noopener">100.95.173.65:8890</a> (Tailscale on). Your results appear here when the snapshot is refreshed.</p>')
+APP_URL = os.environ.get("ICPQ_APP_URL", "http://100.95.173.65:8890")
+body = body.replace('<a class="btn primary" id="importBtn" href="/lists">', f'<a class="btn primary" id="importBtn" href="{APP_URL}/lists" target="_blank" rel="noopener">')
 css = (W / "static/orig.css").read_text() + (W / "static/app.css").read_text() + """
 body{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
 .edit,#exp,#expx,.results details.btn,#sigForm{display:none!important}

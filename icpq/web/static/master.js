@@ -366,7 +366,7 @@ function render(){
     on ? th.setAttribute("aria-sort", st.dir > 0 ? "ascending" : "descending") : th.removeAttribute("aria-sort");
     th.querySelector(".ar").textContent = on ? (st.dir > 0 ? "↑" : "↓") : ""; });
   const slice = view.slice(0, st.shown);
-  const empty = A.length ? "No accounts match. Clear the search or open Filters to widen the view." : 'No accounts yet. Upload a list on the <a href="/lists">Lists &amp; runs</a> page and start a research run.';
+  const empty = A.length ? "No accounts match. Clear the search or open Filters to widen the view." : `No accounts yet. <a href="${$("importBtn").getAttribute("href")}"${$("importBtn").target ? ' target="_blank" rel="noopener"' : ""}>Import a CSV or Excel file</a> and click Start research.`;
   $("tb").innerHTML = slice.length ? slice.map(rowHtml).join("") : `<tr><td colspan="${COLS.length}" class="empty">${empty}</td></tr>`;
   $("moreBox").hidden = view.length <= PAGE;
   $("shown").textContent = `Showing ${fmt(slice.length)} of ${fmt(view.length)}`;
