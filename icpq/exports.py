@@ -58,7 +58,8 @@ def to_xlsx(rows, cols, labels=None, sheet="Accounts"):
     out = io.BytesIO()
     xml_rows = []
     for ri, r in enumerate([head] + body, start=1):
-        cells = "".join(f'<c r="{_col(ci)}{ri}" t="inlineStr"{" s=\"1\"" if ri == 1 else ""}><is><t xml:space="preserve">{escape(str(v)[:32000])}</t></is></c>'
+        bold = ' s="1"' if ri == 1 else ""
+        cells = "".join(f'<c r="{_col(ci)}{ri}" t="inlineStr"{bold}><is><t xml:space="preserve">{escape(str(v)[:32000])}</t></is></c>'
                         for ci, v in enumerate(r))
         xml_rows.append(f'<row r="{ri}">{cells}</row>')
     sheet_xml = ('<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'

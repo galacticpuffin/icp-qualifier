@@ -191,7 +191,7 @@ def ingest(ws, list_id, header, body, mapping):
         ids = {}
         for order, c in enumerate(comps, start=1):
             p = c["primary"]
-            rel, parent_id, notes = c["relation"], None, c["notes"]
+            rel, notes = c["relation"], c["notes"]
             if p.get("parent"):
                 pc = by_norm.get(norm_name(p["parent"]))
                 if pc is not None and pc is not c:
