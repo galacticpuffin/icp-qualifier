@@ -77,7 +77,7 @@ def profile_cfgs(ws):
     return {r["id"]: normalize(jload(r["config"], {})) for r in ws.execute("SELECT id, config FROM profiles")}
 
 
-def build(ws, app=None, runner_info=None):
+def build(ws, app=None, runner_info=None, wid=None):
     cfgs = profile_cfgs(ws)
     lists = [dict(x) for x in ws.execute("SELECT * FROM lists ORDER BY id")]
     default_pid = next((x["profile_id"] for x in lists if x["profile_id"]), None) or (min(cfgs) if cfgs else None)
@@ -90,6 +90,9 @@ def build(ws, app=None, runner_info=None):
                          FROM accounts a LEFT JOIN research r ON r.account_id=a.id LEFT JOIN verdicts v ON v.account_id=a.id
                          ORDER BY a.list_id, a.company_order, a.id""").fetchall()
     prim = {r["id"]: r for r in rows if r["is_primary"]}
+    ppl = {}
+    for c in ws.execute("SELECT account_id, name, title, committee, email, status FROM contacts ORDER BY committee='' , name=''"):
+        ppl.setdefault(c["account_id"], []).append(c)
     lname = {x["id"]: x["name"] for x in lists}
     accts = []
     for r in rows:
@@ -147,6 +150,10 @@ def build(ws, app=None, runner_info=None):
             a["note"] = v["review_reason"] or ""
         a["rs"] = {"PENDING": "Pending research", "PENDING_WEBSITE": "Blocked: no verified website", "RETRY": "Blocked: " + (a.get("note") or "search")}.get(a["stage"], "Research complete")
         a["nv"] = sum(1 for x in sigs.values() if x.get("status") == "VERIFIED")
+        cs = ppl.get(r["id"], [])
+        a["npl"] = len([c for c in cs if c["name"]])
+        a["dmc"] = len([c for c in cs if c["committee"]])
+        a["dm"] = "; ".join(" — ".join(filter(None, [c["name"] or "General inbox", c["title"], c["email"]])) for c in cs[:4])
         accts.append(a)
     # cross-list membership (same website, or same normalised name without a website) - never merges records
     where = {}
@@ -199,12 +206,12 @@ def build(ws, app=None, runner_info=None):
                                          "signals": [{"id": x["id"], "label": x["label"], "req": x["requirement"], "weight": x["weight"]} for x in c["signals"]]}
     summary["default_profile"] = default_pid
     summary["READY_deduped"] = sum(a["stage"] == "READY" for a in accts)
-    summary["ops"] = ops_status(ws, app, runner_info)
-    summary["intel"] = intel_status(ws, app, accts, runner_info)
+    summary["ops"] = ops_status(ws, app, runner_info, wid)
+    summary["intel"] = intel_status(ws, app, accts, runner_info, wid)
     return summary, accts
 
 
-def ops_status(ws, app, runner_info):
+def ops_status(ws, app, runner_info, wid=None):
     lists = {}
     for lst in ws.execute("SELECT id FROM lists"):
         lid = lst["id"]
@@ -220,14 +227,14 @@ def ops_status(ws, app, runner_info):
     search, aist = {}, {}
     if app is not None:
         try:
-            search = SEARCH.status(app)
+            search = SEARCH.status(app, wid)
         except Exception as e:
             search = {"error": str(e)[:120]}
-        s = AI.settings(app)
+        s = AI.settings(app, wid)
         day = now()[:10]
         aist = {"provider": s["provider"], "model": s["model"] or "default", "daily_cap": s["daily_call_cap"],
-                "calls_today": app.execute("SELECT count(*) FROM usage WHERE kind='ai' AND substr(at,1,10)=?", (day,)).fetchone()[0],
-                "month_usd": round(app.execute("SELECT COALESCE(sum(usd),0) FROM usage WHERE kind='ai' AND substr(at,1,7)=?", (day[:7],)).fetchone()[0], 4),
+                "calls_today": app.execute("SELECT count(*) FROM usage WHERE kind='ai' AND substr(at,1,10)=? AND workspace_id IS ?", (day, wid)).fetchone()[0],
+                "month_usd": round(app.execute("SELECT COALESCE(sum(usd),0) FROM usage WHERE kind='ai' AND substr(at,1,7)=? AND workspace_id IS ?", (day[:7], wid)).fetchone()[0], 4),
                 "paid_cap": s["monthly_cap_usd"], "approved": bool(s["approved"])}
     rate = sum(v["researched_1h"] for v in lists.values())
     todo = sum(v["not_researched"] for v in lists.values())
@@ -236,10 +243,10 @@ def ops_status(ws, app, runner_info):
             "spend": {"search_month_usd": (search or {}).get("this_month_usd", 0), "ai_month_usd": aist.get("month_usd", 0)}}
 
 
-def intel_status(ws, app, accts, runner_info):
+def intel_status(ws, app, accts, runner_info, wid=None):
     pend = sum(a["stage"] == "PENDING" for a in accts)
     per_h = ws.execute("SELECT count(*) FROM research WHERE researched_at>=?", (ago_iso(1),)).fetchone()[0]
-    s = AI.settings(app) if app is not None else {"provider": "off", "model": ""}
+    s = AI.settings(app, wid) if app is not None else {"provider": "off", "model": ""}
     review_q = sum(1 for a in accts if a["stage"] == "REVIEW" and not a.get("aic"))
     return {"ai": {"provider": s["provider"], "model": s.get("model") or "default"}, "ai_queue": review_q if s["provider"] != "off" else None,
             "researched_last_hour": per_h, "pending": pend, "eta_hours_pending": round(pend / per_h, 1) if per_h else None,
@@ -257,7 +264,8 @@ def detail(ws, aid):
          "evidence": many("SELECT signal_id,label,kind,status,confidence,url,snippet,use_cases,marker,mentions_org,found_at,reason FROM evidence WHERE account_id=? "
                           "ORDER BY CASE status WHEN 'VERIFIED' THEN 0 WHEN 'INFERRED' THEN 1 ELSE 2 END, marker DESC LIMIT 40"),
          "history": many("SELECT changed_at,change,old_priority,new_priority,note FROM verdict_history WHERE account_id=? ORDER BY id"),
-         "discovery": one("SELECT found_at,domain,verified,query FROM website_discovery WHERE account_id=?")}
+         "discovery": one("SELECT found_at,domain,verified,query FROM website_discovery WHERE account_id=?"),
+         "contacts": many("SELECT name,title,committee,email,phone,source,source_url,status,confidence FROM contacts WHERE account_id=? ORDER BY committee='', name=''")}
     r = d["research"]
     if r.get("log") and len(r["log"]) > 6000:
         r["log"] = r["log"][:6000] + " …"
@@ -278,7 +286,8 @@ def files(accts, lists):
            "ACTIVE_BUYING_SIGNALS": sorted((a for a in live if a.get("trig") and a["stage"] not in ("DQ", "ROUTED")), key=lambda a: -(a.get("opp") or 0)),
            "REVIEW_AND_HOLD": [a for a in live if a["stage"] in ("REVIEW", "QUALIFIED", "HOLD") or (a.get("aic") and a["stage"] != "READY")],
            "RESEARCH_BLOCKED": [a for a in live if a["stage"] in ("RETRY", "PENDING_WEBSITE")],
-           "TARGET_TECH_VERIFIED": [a for a in ready if a.get("tw") == "TARGET TECH VERIFIED"]}
+           "TARGET_TECH_VERIFIED": [a for a in ready if a.get("tw") == "TARGET TECH VERIFIED"],
+           "WITH_DECISION_MAKERS": [a for a in live if a.get("npl")]}
     for lst in lists:
         lid = str(lst["id"])
         out[f"LIST_{lid}_QUALIFIED"] = [a for a in ready if a["list"] == lid]

@@ -35,3 +35,18 @@ files' modification times are unchanged (dashboard.py / master_src.html / master
 * The Docker image isn't built on the Pi (no Docker here). CI builds and smoke-tests it.
 * The Codex CLI token on this Pi has expired; the app reports "run `codex login`". The Claude Code CLI was tested live.
 * Free search scraping can be blocked by the engine. Paid search APIs are wired in but untested live (no key, no approval).
+
+## SaaS customer journey (2026-10-26)
+Verified in a real browser by `scripts/customer_journey.py` (CI runs it): sign up → private workspace → describe business +
+"Draft my ICP" (AI when connected; Claude CLI draft tested live, 15 s) → guided ICP → upload with auto column mapping → Start research →
+live progress → dashboard with scores, reasons, sources, evidence audit and decision-makers → filters → CSV / Excel / decision-maker
+exports → edit ICP with the guided questions → requalify without re-upload → per-workspace settings (AI, search, contacts, caps, keys, usage, team).
+
+### Not finished / not verified
+* Not deployed publicly: needs a server, domain and HTTPS (purchase/approval needed). Today it runs on the owner's Pi over Tailscale.
+* "Forgot password" by e-mail isn't built (no e-mail sending). The workspace owner can set a new password for a member in Settings → Team.
+* No billing / subscription plans.
+* Hunter.io and Apollo.io contact lookups are implemented but untested live (no API key). Only own-website contacts are verified.
+* Paid search (Serper, Brave, Tavily) and paid AI APIs are implemented but untested live (no keys).
+* Sites that only render with JavaScript aren't executed, so they land in REVIEW rather than being qualified.
+* Research of very large lists is limited by website crawling speed (about 5–13 s per company per worker).

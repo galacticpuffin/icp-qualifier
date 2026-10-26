@@ -14,7 +14,7 @@
     <div class="panel" style="display:flex;flex-direction:column;gap:12px">
       <div class="grid3"><label class="f">Provider<select class="in" id="aiP">
         <option value="off">Off (rules only)</option><option value="claude-cli">Claude Code CLI (signed in on this computer)</option><option value="codex-cli">OpenAI Codex CLI (signed in on this computer)</option>
-        <option value="openai">OpenAI-compatible API (hosted or local)</option><option value="anthropic">Claude API (key)</option><option value="mock">Mock (testing)</option></select></label>
+        <option value="openai">OpenAI or compatible API (your key)</option><option value="anthropic">Claude API (your key)</option></select></label>
         <label class="f">Model (optional)<input class="in" id="aiM" placeholder="provider default"></label>
         <label class="f">Effort<select class="in" id="aiE"><option>low</option><option>medium</option><option>high</option></select></label></div>
       <div class="grid3"><label class="f">Endpoint URL (OpenAI-compatible)<input class="in" id="aiU" placeholder="https://api.openai.com or http://127.0.0.1:8000"></label>
@@ -32,11 +32,21 @@
     <div class="sh"><h2>Search provider</h2><span class="faint small">Off by default · paid APIs need your approval and a monthly cap</span></div>
     <div class="panel" style="display:flex;flex-direction:column;gap:12px">
       <div class="grid3"><label class="f">Provider<select class="in" id="sP"><option value="none">None (company websites only)</option><option value="duckduckgo">DuckDuckGo HTML (free, slow, rate limited)</option>
-        <option value="serper">Serper API</option><option value="brave">Brave Search API</option><option value="tavily">Tavily API</option><option value="mock">Mock (testing)</option></select></label>
+        <option value="serper">Serper API</option><option value="brave">Brave Search API</option><option value="tavily">Tavily API</option></select></label>
         <label class="f">Monthly cap ($)<input class="in" id="sCap" type="number" min="0"></label><label class="f">Price per 1,000 queries ($)<input class="in" id="sPer" type="number" min="0" step="0.1"></label></div>
       <div class="grid3"><label class="f">Free engine: seconds between searches<input class="in" id="sGap" type="number" min="5"></label><label class="f">API key<input class="in" id="sKey" type="password" autocomplete="off"></label></div>
       <label class="row small"><input type="checkbox" id="sOk"> I approve paid search usage up to the monthly cap above</label>
       <div class="row"><button class="btn primary" id="sSave" type="button">Save</button><input class="in" style="width:260px" id="sQ"><button class="btn" id="sTest" type="button">Test search</button><span class="small" id="sMsg"></span></div>
+    </div>
+  </section>
+  <section class="sec">
+    <div class="sh"><h2>Decision-makers</h2><span class="faint small">Found for qualified accounts. The company's own website is always checked (free)</span></div>
+    <div class="panel" style="display:flex;flex-direction:column;gap:12px">
+      <div class="grid3"><label class="f">Extra source<select class="in" id="cP"><option value="site">Company websites only (free)</option><option value="hunter">Hunter.io (your API key)</option><option value="apollo">Apollo.io (your API key)</option></select></label>
+        <label class="f">Monthly cap ($)<input class="in" id="cCap" type="number" min="0"></label><label class="f">Estimated cost per company ($)<input class="in" id="cPer" type="number" min="0" step="0.01"></label></div>
+      <div class="grid3"><label class="f">People per company<input class="in" id="cN" type="number" min="1" max="25"></label><label class="f">API key<input class="in" id="cKey" type="password" autocomplete="off"></label></div>
+      <label class="row small"><input type="checkbox" id="cOk"> I approve paid lookups up to the monthly cap above</label>
+      <div class="row"><button class="btn primary" id="cSave" type="button">Save</button><span class="small" id="cMsg"></span></div>
     </div>
   </section>
   <section class="sec">
@@ -46,7 +56,8 @@
   <section class="sec">
     <div class="sh"><h2>Team &amp; account</h2></div>
     <div class="grid2">
-      <div class="panel" style="display:flex;flex-direction:column;gap:10px"><h3>Add someone to this workspace</h3>
+      <div class="panel" style="display:flex;flex-direction:column;gap:10px"><h3>People in this workspace</h3><ul class="evl" id="members"></ul>
+        <h3 style="margin-top:8px">Add someone to this workspace</h3>
         <label class="f">E-mail<input class="in" id="mE"></label><label class="f">Temporary password (only for a new account)<input class="in" id="mP" type="password" autocomplete="new-password"></label>
         <div class="row"><button class="btn" id="mAdd" type="button">Add</button><span class="small" id="mMsg"></span></div></div>
       <div class="panel" style="display:flex;flex-direction:column;gap:10px"><h3>Change my password</h3>

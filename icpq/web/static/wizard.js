@@ -1,6 +1,6 @@
 /* ICP wizard: one question at a time; conditional follow-ups; suggestion chips from the chosen market pack; answers are
    kept in this browser until the profile is saved. The server turns the answers into the profile (POST /api/wizard/build). */
-let W = null, A = {}, idx = 0, PACK = null, KEY = "icpq-wizard";
+let W = null, A = {}, idx = 0, PACK = null, KEY = "icpq-wizard", EDIT = 0;
 const slug = s => String(s || "").toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "").slice(0, 40) || "signal";
 const save = () => { try { localStorage.setItem(KEY, JSON.stringify({A, idx})); } catch (e) { /* private mode: answers live for this page only */ } };
 const packOf = () => W.packs.find(p => p.id === (A.pack || "generic")) || W.packs[W.packs.length - 1];
@@ -102,11 +102,32 @@ async function show(){
   const S = steps(); idx = Math.max(0, Math.min(idx, S.length - 1)); const q = S[idx]; save();
   $("wstep").textContent = `${idx + 1} / ${S.length}`; $("wbar").style.width = (100 * (idx + 1) / S.length) + "%"; $("wtopic").textContent = q.title;
   $("qprompt").textContent = q.prompt || "Here is what your engine will do"; $("qhelp").textContent = q.help || "";
-  const B = $("qbody"); B.innerHTML = ""; $("back").disabled = idx === 0; $("skip").classList.toggle("hidden", q.kind === "review"); $("next").textContent = q.kind === "review" ? "Save profile" : "Next";
+  const B = $("qbody"); B.innerHTML = ""; $("back").disabled = idx === 0; $("skip").classList.toggle("hidden", q.kind === "review"); $("next").textContent = q.kind === "review" ? (EDIT ? "Save changes" : "Save profile") : "Next";
   const P = packOf();
   const sug = k => k === "industries" ? P.industries : k === "technologies" ? P.technologies : k === "titles" ? P.titles : k === "departments" ? P.departments : [];
   switch (q.kind){
-    case "fields": q.fields.forEach(f => B.appendChild(field(f.k, f.label, f.ph, f.long))); break;
+    case "fields": {
+      q.fields.forEach(f => B.appendChild(field(f.k, f.label, f.ph, f.long)));
+      if (q.id === "company") {
+        const r = document.createElement("div"); r.className = "row";
+        r.innerHTML = '<button class="btn" type="button" id="draft">Draft my ICP</button><span class="small faint" id="draftMsg">Optional: pre-fills the next questions from your description. You review every item.</span>';
+        B.appendChild(r);
+        $("draft").onclick = async () => {
+          if (!(A.sells || A.describe)) { $("draftMsg").textContent = "Tell us what you sell first."; return; }
+          $("draft").disabled = true; $("draftMsg").textContent = "Drafting… (up to a minute)";
+          try {
+            const r = await api("/api/wizard/ai-draft", {method: "POST", body: {answers: A}}), d = r.draft;
+            for (const k of ["ideal", "pack"]) if (d[k] && !A[k]) A[k] = d[k];
+            for (const k of ["industries", "exclude_industries", "technologies", "competitors", "titles", "departments"]) if (d[k] && d[k].length) A[k] = [...new Set([...(A[k] || []), ...d[k]])];
+            if (d.signals && d.signals.length) { A.signals = A.signals || []; d.signals.forEach(x => { if (!A.signals.some(y => y.id === x.id)) A.signals.push(x); }); }
+            save();
+            $("draftMsg").textContent = r.source === "ai" ? `Drafted ${d.signals.length} signals, ${d.industries.length} industries and ${d.titles.length} buyer titles. Click Next to review each one.`
+              : `AI isn't connected (${r.message}). We picked the closest market for suggestions instead; connect AI in Settings for a full draft.`;
+          } catch (e) { $("draftMsg").textContent = e.message; }
+          $("draft").disabled = false;
+        };
+      }
+      break; }
     case "longtext": B.appendChild(field(q.k, "", "", true)); break;
     case "pack": {
       B.appendChild(choice("pack", W.packs.map(p => [p.id, p.label]), () => show()));
@@ -183,9 +204,11 @@ $("next").onclick = async () => {
   if (S[idx].kind === "review") {
     $("next").disabled = true;
     try {
-      const r = await api("/api/profiles", {method: "POST", body: {answers: A, name: A.profile_name || undefined}});
+      let id = EDIT;
+      if (EDIT) await api("/api/profiles/" + EDIT, {method: "PUT", body: {answers: {...A, profile_name: A.profile_name}, note: "edited with the guided questions"}});
+      else id = (await api("/api/profiles", {method: "POST", body: {answers: A, name: A.profile_name || undefined}})).id;
       try { localStorage.removeItem(KEY); } catch (e) { /* ignore */ }
-      location.href = "/lists?profile=" + r.id + "&new=1";
+      location.href = EDIT ? "/profiles?id=" + id + "&saved=1" : "/lists?profile=" + id + "&new=1";
     } catch (e) { $("saved").textContent = e.message; $("saved").className = "err small"; $("next").disabled = false; }
     return;
   }
@@ -198,6 +221,9 @@ document.addEventListener("keydown", e => { if (e.key === "Enter" && (e.ctrlKey 
 (async () => {
   await loadMe(); nav("/wizard"); KEY = "icpq-wizard-" + ME.workspace_id;
   W = await api("/api/wizard");
-  try { const s = JSON.parse(localStorage.getItem(KEY) || "null"); if (s) { A = s.A || {}; idx = s.idx || 0; } } catch (e) { /* ignore */ }
+  EDIT = +(new URLSearchParams(location.search).get("profile") || 0);
+  if (EDIT) { const p = await api("/api/profiles/" + EDIT); A = p.answers && Object.keys(p.answers).length ? p.answers : {}; A.profile_name = p.name; KEY += "-edit-" + EDIT;
+    document.querySelector(".sh h2").textContent = "Edit ICP · " + p.name; }
+  else try { const s = JSON.parse(localStorage.getItem(KEY) || "null"); if (s) { A = s.A || {}; idx = s.idx || 0; } } catch (e) { /* ignore */ }
   show();
 })();

@@ -36,7 +36,7 @@ try:
         pg.click("button[type=submit]")
         pg.wait_for_url(base + "/wizard")
         # Q1 company
-        pg.locator("#qbody input").nth(0).fill("Acme Telematics"); pg.locator("#qbody textarea").fill("GPS fleet tracking for service businesses")
+        pg.locator("#qbody input").nth(0).fill("Acme Telematics"); pg.locator("#qbody textarea").first.fill("GPS fleet tracking for service businesses")
         pg.click("#next")
         pg.get_by_role("button", name="Logistics / fleet / transportation").click()
         pg.screenshot(path=str(out / "wizard_market.png"))

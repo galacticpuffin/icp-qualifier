@@ -18,16 +18,17 @@ EXPORT_COLUMNS = [
     ("opp", "Fit_Score"), ("oppx", "Fit_Score_Explanation"), ("cc", "Technologies_Verified"), ("cci", "Technologies_Mentioned"),
     ("vend", "Competitors_Verified"), ("chan", "Channel_vs_Direct"), ("trig", "Buying_Triggers"), ("angle", "Recommended_Angle"),
     ("persona", "Buyer_Persona"), ("emp", "Employees"), ("rev", "Revenue"), ("loc", "Location"), ("relation", "Entity_Relation"),
-    ("aics", "AI_Candidate_Strength"), ("aicq", "AI_Candidate_Quote_UNVERIFIED"), ("aicu", "AI_Candidate_URL"),
+    ("dm", "Decision_Makers"), ("npl", "Decision_Maker_Count"), ("aics", "AI_Candidate_Strength"), ("aicq", "AI_Candidate_Quote_UNVERIFIED"), ("aicu", "AI_Candidate_URL"),
 ]
 DEFAULT_EXPORT = ["list", "name", "domain", "stage", "pr", "sms", "uc", "vert", "ev", "url", "conf", "status", "hold", "missing", "sigv",
-                  "scale", "just", "eas", "eaq", "opp", "oppx", "cc", "vend", "trig", "angle", "persona", "buyer", "at"]
+                  "scale", "just", "eas", "eaq", "opp", "oppx", "cc", "vend", "trig", "angle", "persona", "buyer", "dm", "at"]
 
 QUESTIONS = [
     {"id": "company", "n": 1, "title": "Your company", "prompt": "What company do you work for, and what does it sell?",
-     "help": "One line is plenty.",
+     "help": "Plain English is perfect. If AI is connected (Settings), “Draft my ICP” fills in the next questions for you to check and edit.",
      "kind": "fields", "fields": [{"k": "company_name", "label": "Company"},
                                   {"k": "sells", "label": "What you sell", "long": True},
+                                  {"k": "describe", "label": "Describe your business and your best customers (optional)", "long": True},
                                   {"k": "website", "label": "Your website (optional)"}]},
     {"id": "market", "n": 2, "title": "Your market", "prompt": "What industry or market do you operate in?",
      "help": "Optional. Pick the closest one for suggestion chips, or skip and type your own.", "kind": "pack"},

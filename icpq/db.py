@@ -27,6 +27,9 @@ APP_MIGRATIONS = [
     CREATE TABLE login_attempts(key TEXT PRIMARY KEY, n INTEGER, first_at REAL);
     CREATE TABLE search_engines(engine TEXT PRIMARY KEY, last_at REAL, paused_until REAL, ok INTEGER DEFAULT 0, fail INTEGER DEFAULT 0);
     """,
+    """
+    CREATE TABLE password_resets(token_hash TEXT PRIMARY KEY, user_id INTEGER, expires_at REAL, used INTEGER DEFAULT 0);
+    """,
 ]
 
 WS_MIGRATIONS = [
@@ -66,6 +69,12 @@ WS_MIGRATIONS = [
                       created_at TEXT, started_at TEXT, finished_at TEXT, created_by INTEGER, note TEXT, error TEXT,
                       ai_calls INTEGER DEFAULT 0, search_calls INTEGER DEFAULT 0);
     CREATE TABLE weak(account_id INTEGER PRIMARY KEY, note TEXT, at TEXT);
+    """,
+    """
+    CREATE TABLE contacts(id INTEGER PRIMARY KEY, account_id INTEGER, name TEXT, title TEXT, committee TEXT, email TEXT, phone TEXT,
+                          source TEXT, source_url TEXT, status TEXT, confidence TEXT, found_at TEXT);
+    CREATE INDEX ct_acc ON contacts(account_id);
+    ALTER TABLE research ADD COLUMN contacts_note TEXT;
     """,
 ]
 

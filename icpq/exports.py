@@ -55,6 +55,10 @@ def _col(i):
 
 def to_xlsx(rows, cols, labels=None, sheet="Accounts"):
     head, body = table(rows, cols, labels)
+    return xlsx_rows(head, body, sheet)
+
+
+def xlsx_rows(head, body, sheet="Accounts"):
     out = io.BytesIO()
     xml_rows = []
     for ri, r in enumerate([head] + body, start=1):

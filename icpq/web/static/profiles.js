@@ -30,7 +30,8 @@ async function open(id){
   const r = await api("/api/profiles/" + id); cur = r; cfg = r.config;
   $("pedit").classList.remove("hidden"); $("ptitle").textContent = `${r.name} · v${r.version}`;
   $("rules").innerHTML = rulesHtml(r.rules); $("perr").textContent = r.errors.join(" ");
-  $("dl").href = `/api/profiles/${id}/export`; syncJson(); formEditor();
+  $("dl").href = `/api/profiles/${id}/export`; $("editWiz").href = "/wizard?profile=" + id;
+  if (params.get("saved")) { $("pmsg").className = "small okt"; $("pmsg").textContent = "Saved. Requalify a list below to apply the changes."; } syncJson(); formEditor();
   const L = (await api("/api/lists")).lists; $("rqList").innerHTML = L.length ? L.map(l => `<option value="${l.id}">${esc(l.name)}</option>`).join("") : "<option value=''>no lists yet</option>";
   const V = (await api(`/api/profiles/${id}/versions`)).versions; $("vers").innerHTML = V.map(v => `<li>v${v.version} · ${esc(v.saved_at)}<br><span class="m">${esc(v.note || "")}</span></li>`).join("");
   loadList(); history.replaceState(null, "", "/profiles?id=" + id);

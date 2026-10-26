@@ -10,11 +10,11 @@ const SORD = {READY:0,QUALIFIED:1,HOLD:2,REVIEW:3,RETRY:4,PENDING_WEBSITE:5,PEND
 const isQ = a => a.pr === "A" || a.pr === "B" || a.pr === "C";
 const dash = '<span style="color:var(--faint)">—</span>';
 let S = null, A = [], view = [], DET = {}, RULES = null;
-const st = {sig:"", l:"", s:"Q", v:"", m:"", q:"", t:"", r:"", o:"", c:"", g:"", k:"", x:"", u:"", a:"", sort:"", dir:1, shown:PAGE, open:new Set()};
+const st = {p:"", sig:"", l:"", s:"Q", v:"", m:"", q:"", t:"", r:"", o:"", c:"", g:"", k:"", x:"", u:"", a:"", sort:"", dir:1, shown:PAGE, open:new Set()};
 const XF = {t:[["","All"],["TARGET TECH VERIFIED","Target technology verified"],["FIT VERIFIED ONLY","Fit verified only"],["NEEDS VERIFICATION","Needs verification"]],
   r:[["","All"],["Research complete","Research complete"],["BLOCKED","Blocked (search / no website)"],["Pending research","Pending research"]],
   o:[["","All"],["60","60+"],["40","40+"],["20","20+"]], c:[["","All"],["DIRECT","Direct prospects"],["CHANNEL / PARTNER","Channel / partner"]],
-  g:[["","All"],["Y","Has verified trigger"]], a:[["","All"],["STRONG","AI candidate · strong marker"],["ANY","Any AI candidate"]]};
+  g:[["","All"],["Y","Has verified trigger"]], p:[["","All"],["Y","Has decision-makers"],["C","Buying-committee match"]], a:[["","All"],["STRONG","AI candidate · strong marker"],["ANY","Any AI candidate"]]};
 const optHtml = (id, list) => list.map(([k,l]) => `<input type="radio" name="f${id}" id="f${id}-${k ? k.replace(/[^A-Za-z0-9]/g,"_") : "ALL"}" value="${esc(k)}"><label for="f${id}-${k ? k.replace(/[^A-Za-z0-9]/g,"_") : "ALL"}">${esc(l)}</label>`).join("");
 for (const [id, list] of Object.entries(XF)) $("opt" + id.toUpperCase()).innerHTML = optHtml(id, list);
 function dynOpts(){
@@ -60,7 +60,7 @@ function scaffold(){
   $("optTw").classList.toggle("hidden", !prof.has_target_tech);
   COLS = [["company","Company"],["list","List"],["priority","Priority"],["sms",LBL.core],["useCase",LBL.use_case],["vertical","Segment"],["stack",LBL.stack],["opp","Fit score"],["evidence","Evidence"],["status","Status"]];
   $("thead").innerHTML = COLS.map(([k,l]) => `<th data-k="${k}"><button type="button">${esc(l)} <span class="ar"></span></button></th>`).join("");
-  const finals = ["MASTER_ALL_ACCOUNTS","OUTREACH_READY",...Object.keys(S.lists).map(k => `LIST_${k}_QUALIFIED`),"PRIORITY_A_ACCOUNTS","TECHNOLOGY_OPPORTUNITIES","CHANNEL_PARTNER_OPPORTUNITIES","ACTIVE_BUYING_SIGNALS","REVIEW_AND_HOLD","RESEARCH_BLOCKED"].concat(prof.has_target_tech ? ["TARGET_TECH_VERIFIED"] : []);
+  const finals = ["MASTER_ALL_ACCOUNTS","OUTREACH_READY",...Object.keys(S.lists).map(k => `LIST_${k}_QUALIFIED`),"PRIORITY_A_ACCOUNTS","TECHNOLOGY_OPPORTUNITIES","CHANNEL_PARTNER_OPPORTUNITIES","ACTIVE_BUYING_SIGNALS","REVIEW_AND_HOLD","RESEARCH_BLOCKED","WITH_DECISION_MAKERS","DECISION_MAKERS"].concat(prof.has_target_tech ? ["TARGET_TECH_VERIFIED"] : []);
   const nice = f => f.startsWith("LIST_") ? `${LL[f.split("_")[1]] || "List"} — qualified` : f;
   $("finals").innerHTML = finals.map(f => `<div style="display:flex;justify-content:space-between;gap:12px;padding:4px 0"><a class="link" href="/export/${f}.csv" download>${esc(nice(f))}.csv</a><a class="link" href="/export/${f}.xlsx" download>xlsx</a></div>`).join("") +
     `<a class="link" href="/export/MANIFEST.json" download style="display:block;padding:4px 0">MANIFEST.json (rows + sha256)</a>`;
@@ -261,6 +261,7 @@ function compute(){
     if (st.o && !((a.opp || 0) >= +st.o)) continue;
     if (st.c && a.chan !== st.c) continue;
     if (st.g && !a.trig) continue;
+    if (st.p && !(st.p === "Y" ? a.npl > 0 : a.dmc > 0)) continue;
     if (st.a && !(a.aic && (st.a === "ANY" || a.aic.strength === st.a))) continue;
     const has = (f, v) => String(a[f] || "").split(/[;,]/).map(x => x.trim()).includes(v);
     if (st.k && !has("cc", st.k)) continue;
@@ -283,7 +284,7 @@ function eaRows(a){ const e = a.ea; if (!e || !(isQ(a) || a.stage === "HOLD")) r
 /* rendering */
 function rowHtml(a){
   const open = st.open.has(a.k);
-  const sub = `<span class="sub">row ${esc(a.row)}${a.domain ? " · " + esc(a.domain) : ""}</span>`;
+  const sub = `<span class="sub">row ${esc(a.row)}${a.domain ? " · " + esc(a.domain) : ""}${a.npl ? ` · ${a.npl} decision-maker${a.npl === 1 ? "" : "s"}` : ""}</span>`;
   const lists = `<span class="lb-list">${esc(LL[a.list] || a.src)}</span>` + (a.also ? a.also.split(",").map(l => `<span class="lb-list" style="opacity:.6" title="Also on the ${esc(LL[l])} list">+${esc(LL[l])}</span>`).join("") : "");
   const pr = a.stage === "MERGED" ? "MERGED" : a.stage === "PENDING" ? "PENDING" : a.pr || (a.stage === "PENDING_WEBSITE" ? "PENDING_WEBSITE" : a.stage === "RETRY" ? "RETRY" : "REVIEW");
   const prl = {PENDING:"Queued", PENDING_WEBSITE:"No website", MERGED:"Merged", RETRY:"Retry"}[pr] || pr;
@@ -334,6 +335,8 @@ function detail(a){
       ["Qualification reason", esc(v.qual_reason) || "—", "wide"], ["Review reason", esc(v.review_reason) || "—", "wide"],
       ["Research checks", `${esc(r.pages_checked ?? "—")} own-site pages · ${esc(r.searches_used ?? "—")} searches · search ${esc(r.search_state || "not run")} · attempts ${esc(r.attempts ?? 0)} · researched ${esc(r.researched_at || "—")} · profile v${esc(r.profile_version ?? "—")}`, "wide"],
       ["Entity / parent check", esc(acc.merge_notes) || "—", "wide"]];
+    more.push(["Decision-makers", d.contacts && d.contacts.length ? `<ul class="evl">${d.contacts.map(c => `<li><b>${esc(c.name || "General inbox")}</b>${c.title ? " · " + esc(c.title) : ""}${c.committee ? ` <span class="sg sg-VERIFIED">${esc(c.committee)}</span>` : ""}<br>${c.email ? `<span class="q">${esc(c.email)}</span> ` : ""}${c.phone ? esc(c.phone) + " " : ""}${link(c.source_url)}<br><span class="m">${esc(c.status)} · ${esc(c.source)} · ${esc(c.confidence)}</span></li>`).join("")}</ul>`
+      : esc((d.research || {}).contacts_note || (["A","B","C","HOLD"].includes(a.pr) ? "None found on the company's own site" : "Searched for qualified accounts only")), "wide"]);
     if (d.parent) more.push(["Parent company", `${esc(d.parent.name)} ${d.parent.domain ? "(" + esc(d.parent.domain) + ")" : ""}`]);
     if (lg.note) more.push(["Research note", esc(lg.note), "wide"]);
     if (lg.search && lg.search.length) more.push(["Searches", `<ul class="evl">${lg.search.map(s => `<li><span class="m">${esc(s.q)}</span><br>${s.error ? '<span class="err">' + esc(s.error) + "</span>" : `${esc(s.results)} results · ${esc((s.candidates || []).length)} on the company's own site`}</li>`).join("")}</ul>`, "wide"]);
@@ -353,7 +356,7 @@ function render(){
     st.t, st.r, st.o ? "Fit score " + st.o + "+" : "", st.c, st.g ? "Verified buying trigger" : "", st.sig ? "Signal: " + (((S.profiles[String(S.default_profile)] || {}).signals || []).find(g => g.id === st.sig) || {label: st.sig}).label + " · ranked by fit score" : "", st.a ? "AI candidate " + st.a.toLowerCase() : "", st.k, st.x, st.u].filter(Boolean).map(esc);
   $("ttl").innerHTML = `${esc(vlabel)} — ${fmt(view.length)} ${esc(TITLE[st.s])} ${view.length === 1 ? "Record" : "Records"}` + (extra.length ? `<small>${extra.join(" · ")}</small>` : "");
   const exp = $("exp"); exp.textContent = `Export ${fmt(view.length)} CSV`; exp.disabled = !view.length; $("expx").disabled = !view.length;
-  const nonDefault = (st.s !== "Q") + (!!st.v) + (!!st.m) + (!!st.l) + ["t","r","o","c","g","k","x","u","a"].filter(k => st[k]).length;
+  const nonDefault = (st.s !== "Q") + (!!st.v) + (!!st.m) + (!!st.l) + ["t","r","o","c","g","k","x","u","a","p"].filter(k => st[k]).length;
   $("fBadge").hidden = !nonDefault; $("fBadge").textContent = nonDefault;
   document.querySelectorAll(".kcard").forEach(c => c.setAttribute("aria-pressed", !st.v && c.dataset.s === st.s));
   document.querySelectorAll(".vcard").forEach(c => c.setAttribute("aria-pressed", c.dataset.v === st.v));
@@ -408,18 +411,18 @@ $("tb").addEventListener("click", async e => {
 $("tb").addEventListener("keydown", e => { if ((e.key === "Enter" || e.key === " ") && e.target.matches("tr.r")){ e.preventDefault(); e.target.click(); } });
 const pop = $("pop"), fBtn = $("fBtn");
 function openPop(on){ pop.hidden = !on; fBtn.setAttribute("aria-expanded", on);
-  if (on){ for (const id of ["t","r","o","c","g","k","x","u","a"]){ const el = document.querySelector(`input[name="f${id}"][value="${CSS.escape(st[id])}"]`); if (el) el.checked = true; }
+  if (on){ for (const id of ["t","r","o","c","g","k","x","u","a","p"]){ const el = document.querySelector(`input[name="f${id}"][value="${CSS.escape(st[id])}"]`); if (el) el.checked = true; }
     const ck = id => { const el = $(id); if (el) el.checked = true; };
     ck("fl-" + (st.l || "ALL")); ck("fs-" + st.s); ck("fv-" + (st.v || "ALL")); ck("fm-" + (st.m || "ALL")); } }
 fBtn.onclick = () => openPop(pop.hidden);
 $("fDone").onclick = () => { openPop(false); fBtn.focus(); };
-$("fReset").onclick = () => { st.sig = ""; st.m = ""; st.l = ""; for (const id of ["t","r","o","c","g","k","x","u","a"]) st[id] = ""; counts(); setView("Q", ""); openPop(true); };
+$("fReset").onclick = () => { st.sig = ""; st.m = ""; st.l = ""; for (const id of ["t","r","o","c","g","k","x","u","a","p"]) st[id] = ""; counts(); setView("Q", ""); openPop(true); };
 pop.addEventListener("change", e => {
   if (e.target.name === "fl"){ st.l = e.target.value; $("lpick").value = st.l; counts(); setView(st.s, st.v); }
   if (e.target.name === "fs") setView(e.target.value, st.v);
   if (e.target.name === "fv") setView(st.s, e.target.value);
   if (e.target.name === "fm"){ st.m = e.target.value; setView(st.s, st.v); }
-  const xf = /^f([trocgkxua])$/.exec(e.target.name); if (xf){ st[xf[1]] = e.target.value; setView(st.s, st.v); }
+  const xf = /^f([trocgkxuap])$/.exec(e.target.name); if (xf){ st[xf[1]] = e.target.value; setView(st.s, st.v); }
 });
 document.addEventListener("click", e => { if (!pop.hidden && !e.target.closest(".fwrap")) openPop(false); });
 document.addEventListener("keydown", e => { if (e.key === "Escape" && !pop.hidden){ openPop(false); fBtn.focus(); } });

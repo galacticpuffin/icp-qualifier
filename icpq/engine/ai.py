@@ -35,9 +35,18 @@ class AIUnavailable(Exception):
     pass
 
 
-def settings(app):
+def skey(name, wid):
+    return f"{name}:w{int(wid)}" if wid else name
+
+
+def cli_allowed():
+    """Subscription CLIs run on the server owner's own account: only for self-hosted installs (ICPQ_ALLOW_CLI=1)."""
+    return os.environ.get("ICPQ_ALLOW_CLI") == "1"
+
+
+def settings(app, wid=None):
     from ..db import get_setting
-    s = json.loads(get_setting(app, "ai", "{}") or "{}")
+    s = json.loads(get_setting(app, skey("ai", wid), "{}") or "{}")
     s.setdefault("provider", "off")
     s.setdefault("model", "")
     s.setdefault("effort", "low")
@@ -68,8 +77,8 @@ def _parse(txt):
 
 
 class Client:
-    def __init__(self, s):
-        self.s, self.kind = s, s["provider"]
+    def __init__(self, s, wid=None):
+        self.s, self.kind, self.wid = s, s["provider"], wid
         self.label = f"{s.get('model') or 'default'}@{self.kind}"
 
     # ---------------------------------------------------------------- transports
@@ -115,7 +124,7 @@ class Client:
 
     def _http(self, prompt, schema):
         from ..secrets import get_secret
-        key = get_secret("ai_" + self.kind)
+        key = get_secret(skey("ai_" + self.kind, self.wid).replace(":", "_"))
         if self.kind == "anthropic":
             if not key:
                 raise AIUnavailable("no Claude API key saved")
@@ -158,10 +167,13 @@ class Client:
 
     # ---------------------------------------------------------------- public
     def ask(self, app, prompt, schema, workspace_id=None, retries=2):
+        workspace_id = workspace_id or self.wid
         if self.kind == "off":
             raise AIUnavailable("AI is off (Settings → AI)")
+        if self.kind.endswith("-cli") and not cli_allowed():
+            raise AIUnavailable("Signed-in CLIs are only available on self-hosted installs; choose an API provider in Settings")
         day = now()[:10]
-        n = app.execute("SELECT count(*) FROM usage WHERE kind='ai' AND provider=? AND substr(at,1,10)=?", (self.kind, day)).fetchone()[0]
+        n = app.execute("SELECT count(*) FROM usage WHERE kind='ai' AND provider=? AND substr(at,1,10)=? AND COALESCE(workspace_id,0)=COALESCE(?,0)", (self.kind, day, workspace_id)).fetchone()[0]
         if n >= int(self.s.get("daily_call_cap") or 0):
             raise AIUnavailable(f"daily AI call cap reached ({self.s.get('daily_call_cap')})")
         cost = 0.0
@@ -169,7 +181,7 @@ class Client:
             if not self.s.get("approved"):
                 raise AIUnavailable(f"{self.kind} is a paid API: approve it with a monthly cap in Settings first")
             cost = float(self.s.get("usd_per_call") or 0)
-            m = app.execute("SELECT COALESCE(sum(usd),0) FROM usage WHERE kind='ai' AND provider=? AND substr(at,1,7)=?", (self.kind, day[:7])).fetchone()[0]
+            m = app.execute("SELECT COALESCE(sum(usd),0) FROM usage WHERE kind='ai' AND provider=? AND substr(at,1,7)=? AND COALESCE(workspace_id,0)=COALESCE(?,0)", (self.kind, day[:7], workspace_id)).fetchone()[0]
             if m + cost > float(self.s.get("monthly_cap_usd") or 0):
                 raise AIUnavailable(f"{self.kind} monthly cap ${self.s.get('monthly_cap_usd')} reached")
         with app:
@@ -205,8 +217,8 @@ class Client:
             return False, str(e), round(time.time() - t, 1)
 
 
-def client(app):
-    return Client(settings(app))
+def client(app, wid=None):
+    return Client(settings(app, wid), wid)
 
 
 RULE_SCHEMA = {"type": "object", "properties": {"applies": {"type": "boolean"}, "quotes": {"type": "array", "items": {"type": "string"}},
@@ -279,3 +291,35 @@ def suggest_signals(cl, app, answers):
                          "patterns": pats, "requirement": "mandatory" if s.get("requirement") == "mandatory" else "preferred", "weight": 10,
                          "ai_suggested": True})
     return sigs
+
+
+DRAFT_SCHEMA = {"type": "object", "properties": {
+    "ideal": {"type": "string"}, "industries": {"type": "array", "items": {"type": "string"}}, "exclude_industries": {"type": "array", "items": {"type": "string"}},
+    "technologies": {"type": "array", "items": {"type": "string"}}, "competitors": {"type": "array", "items": {"type": "string"}},
+    "titles": {"type": "array", "items": {"type": "string"}}, "departments": {"type": "array", "items": {"type": "string"}},
+    "signals": SUGGEST_SCHEMA["properties"]["signals"]},
+    "required": ["ideal", "industries", "exclude_industries", "technologies", "competitors", "titles", "departments", "signals"]}
+
+
+def draft_icp(cl, app, a):
+    """Plain-English business description -> a first draft of the wizard answers. Every item is shown to the user to edit."""
+    prompt = (f"Company: {a.get('company_name')}. What it sells: {a.get('sells')}. In the user's words: {a.get('describe') or ''}\n"
+              "Draft an ideal customer profile for B2B prospecting. ideal: one sentence. industries: up to 6 target industries as they appear in company "
+              "databases. exclude_industries: up to 4. technologies: up to 6 products/platforms a good prospect uses. competitors: up to 6 competitor company names "
+              "(only real, well-known ones; empty if unsure). titles: up to 6 buyer job titles. departments: up to 4. signals: up to 6 things a researcher can verify "
+              "on a PROSPECT's own public website showing fit or need, each with label, category (product, technology, competitor, problem, buying, behavioral, "
+              "operational, financial, organizational, compliance), patterns = 2-5 short literal phrases found on such websites, requirement = mandatory (at most 2) or preferred.")
+    out = cl.ask(app, prompt, DRAFT_SCHEMA)
+    clean = lambda xs, n: [str(x).strip()[:60] for x in (xs or []) if str(x).strip()][:n]
+    sigs = []
+    for s in (out.get("signals") or [])[:6]:
+        pats = [p for p in s.get("patterns") or [] if isinstance(p, str) and 2 < len(p) < 60 and not p.lower().startswith("re:")][:5]
+        if pats and s.get("label"):
+            lab = str(s["label"])[:60]
+            sigs.append({"id": re.sub(r"[^a-z0-9]+", "_", lab.lower()).strip("_")[:40], "label": lab, "patterns": pats, "markers": [], "weight": 15 if s.get("requirement") == "mandatory" else 10,
+                         "category": s.get("category") if s.get("category") in ("product", "technology", "competitor", "problem", "buying", "behavioral", "operational",
+                                                                               "financial", "organizational", "compliance") else "other",
+                         "requirement": "mandatory" if s.get("requirement") == "mandatory" else "preferred", "use_case": lab, "ai_suggested": True})
+    return {"ideal": str(out.get("ideal") or "")[:300], "industries": clean(out.get("industries"), 6), "exclude_industries": clean(out.get("exclude_industries"), 4),
+            "technologies": clean(out.get("technologies"), 6), "competitors": clean(out.get("competitors"), 6), "titles": clean(out.get("titles"), 6),
+            "departments": clean(out.get("departments"), 4), "signals": sigs}

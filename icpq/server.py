@@ -20,6 +20,7 @@ from . import __version__, auth, db, ingest
 from . import dashboard as DASH
 from . import exports as EXP
 from .engine import ai as AI
+from .engine import contacts as CONTACTS
 from .engine import extract
 from .engine import search as SEARCH
 from .icp import packs, schema, wizard
@@ -38,8 +39,9 @@ _cache_lock = threading.Lock()
 CSP = ("default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; "
        "img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'")
 PAGES = {"/": "master.html", "/index.html": "master.html", "/wizard": "wizard.html", "/profiles": "profiles.html", "/lists": "lists.html",
-         "/settings": "settings.html", "/login": "login.html", "/setup": "setup.html"}
-PUBLIC = {"/login", "/setup", "/healthz", "/readyz", "/api/login", "/api/setup", "/api/setup-state"}
+         "/settings": "settings.html", "/login": "login.html", "/setup": "setup.html", "/signup": "signup.html"}
+PUBLIC = {"/login", "/setup", "/signup", "/healthz", "/readyz", "/api/login", "/api/setup", "/api/setup-state", "/api/signup"}
+SIGNUP = os.environ.get("ICPQ_SIGNUP", "1") == "1"
 
 
 def private_ok(addr):
@@ -77,7 +79,7 @@ def snapshot(wid, max_age=10):
             return c
     ws, app = db.ws_db(wid), db.app_db()
     try:
-        s, a = DASH.build(ws, app, runner_info())
+        s, a = DASH.build(ws, app, runner_info(), int(wid))
     finally:
         ws.close()
         app.close()
@@ -189,7 +191,7 @@ class Handler(BaseHTTPRequestHandler):
                 if p.startswith("/api/") or p.startswith("/export/"):
                     raise HTTPError(401, "Sign in first.")
                 return self.redirect("/setup" if auth.needs_setup(app) else "/login")
-            if method != "GET" and p not in ("/api/login", "/api/setup") and sess:
+            if method != "GET" and p not in ("/api/login", "/api/setup", "/api/signup") and sess:
                 if (self.headers.get("X-CSRF") or "") != sess["csrf"]:
                     raise HTTPError(403, "Security check failed: reload the page and try again.")
             if method == "GET" and p in PAGES:
@@ -249,7 +251,20 @@ class Handler(BaseHTTPRequestHandler):
     def api(self, method, p, q, app, sess):
         # ---------------- setup / auth
         if p == "/api/setup-state":
-            return self.j({"needs_setup": auth.needs_setup(app)})
+            return self.j({"needs_setup": auth.needs_setup(app), "signup": SIGNUP and not auth.needs_setup(app)})
+        if p == "/api/signup" and method == "POST":
+            if not SIGNUP or auth.needs_setup(app):
+                raise HTTPError(403, "Sign-up is closed on this server. Ask its owner for an account.")
+            key = f"signup:{self.ip()}"
+            if auth.throttled(app, key):
+                raise HTTPError(429, "Too many sign-ups from this address. Try again in 15 minutes.")
+            b = self.json_body()
+            auth.note_fail(app, key)          # counts sign-ups per address (8 per 15 minutes)
+            uid = auth.create_user(app, b.get("email"), b.get("password"), b.get("name"))
+            wid = auth.create_workspace(app, b.get("workspace") or ((b.get("name") or "My") + "'s workspace"), uid)
+            tok = auth.new_session(app, uid)
+            db.audit(app, uid, wid, "signup", b.get("email"))
+            return self.j({"ok": True}, extra=self.set_session_cookie(tok))
         if p == "/api/setup" and method == "POST":
             if not auth.needs_setup(app):
                 raise HTTPError(409, "Setup is already done. Sign in instead.")
@@ -309,6 +324,25 @@ class Handler(BaseHTTPRequestHandler):
                 app.execute("INSERT OR IGNORE INTO members(workspace_id,user_id,role) VALUES(?,?,?)", (wid, uid, "member"))
             db.audit(app, sess["user_id"], wid, "member.add", b.get("email"))
             return self.j({"ok": True})
+        if p == "/api/workspaces/members" and method == "GET":
+            wid, ws = self.ws_of(app, sess)
+            ws.close()
+            return self.j({"members": [dict(r) for r in app.execute("SELECT u.id, u.email, u.name, m.role, u.last_login FROM members m JOIN users u ON u.id=m.user_id WHERE m.workspace_id=? ORDER BY u.id", (wid,))]})
+        if p == "/api/workspaces/reset-password" and method == "POST":
+            wid, ws = self.ws_of(app, sess, "owner")
+            ws.close()
+            b = self.json_body()
+            uid = int(b.get("user_id") or 0)
+            if not auth.role(app, uid, wid):
+                raise HTTPError(404, "That person isn't in this workspace.")
+            err = auth.valid_password(b.get("password"))
+            if err:
+                raise HTTPError(400, err)
+            with app:
+                app.execute("UPDATE users SET pw=? WHERE id=?", (auth.hash_pw(b["password"]), uid))
+                app.execute("DELETE FROM sessions WHERE user_id=?", (uid,))
+            db.audit(app, sess["user_id"], wid, "member.password_reset", str(uid))
+            return self.j({"ok": True})
         if p == "/api/password" and method == "POST":
             b = self.json_body()
             u = app.execute("SELECT pw FROM users WHERE id=?", (sess["user_id"],)).fetchone()
@@ -331,8 +365,18 @@ class Handler(BaseHTTPRequestHandler):
         if p == "/api/wizard/build" and method == "POST":
             cfg = wizard.build_config(self.json_body().get("answers") or {})
             return self.j({"config": cfg, "rules": schema.describe(cfg), "errors": schema.validate(cfg)})
+        if p == "/api/wizard/ai-draft" and method == "POST":
+            wid, ws = self.ws_of(app, sess)
+            ws.close()
+            a = self.json_body().get("answers") or {}
+            try:
+                return self.j({"draft": AI.draft_icp(AI.client(app, wid), app, a), "source": "ai"})
+            except AI.AIUnavailable as e:
+                return self.j({"draft": {"pack": packs.guess(" ".join(str(a.get(k) or "") for k in ("sells", "describe", "company_name")))}, "source": "rules", "message": str(e)})
         if p == "/api/wizard/ai-suggest" and method == "POST":
-            cl = AI.client(app)
+            wid, ws = self.ws_of(app, sess)
+            ws.close()
+            cl = AI.client(app, wid)
             try:
                 return self.j({"signals": AI.suggest_signals(cl, app, self.json_body().get("answers") or {})})
             except AI.AIUnavailable as e:
@@ -438,41 +482,50 @@ class Handler(BaseHTTPRequestHandler):
                 ws.close()
         if p.startswith("/export/") or p == "/api/export/view":
             return self.export(method, p, q, app, sess)
-        # ---------------- settings
+        # ---------------- settings (per workspace: each customer manages their own providers, keys and limits)
+        SECRET_NAMES = ("search_serper", "search_brave", "search_tavily", "ai_openai", "ai_anthropic", "contacts_apollo", "contacts_hunter")
         if p == "/api/settings":
+            wid, ws = self.ws_of(app, sess, "owner" if method == "POST" else "member")
+            ws.close()
             if method == "POST":
-                if not sess["is_admin"]:
-                    raise HTTPError(403, "Only an admin can change providers and limits.")
                 b = self.json_body()
                 if "search" in b:
-                    s = SEARCH.settings(app)
+                    s = SEARCH.settings(app, wid)
                     s.update({k: b["search"][k] for k in ("provider", "approved", "monthly_cap_usd", "gap_s", "usd_per_1k") if k in b["search"]})
                     if s["provider"] not in ("none", "duckduckgo", "serper", "brave", "tavily", "mock"):
                         raise HTTPError(400, "unknown search provider")
-                    db.set_setting(app, "search", jdump(s))
+                    db.set_setting(app, f"search:w{wid}", jdump(s))
                 if "ai" in b:
-                    s = AI.settings(app)
+                    s = AI.settings(app, wid)
                     s.update({k: b["ai"][k] for k in ("provider", "model", "effort", "url", "approved", "daily_call_cap", "monthly_cap_usd", "usd_per_call", "timeout") if k in b["ai"]})
-                    if s["provider"] not in ("off", "claude-cli", "codex-cli", "openai", "anthropic", "mock"):
-                        raise HTTPError(400, "unknown AI provider")
-                    db.set_setting(app, "ai", jdump(s))
-                db.audit(app, sess["user_id"], None, "settings", jdump(b))
-                with _cache_lock:
-                    _cache.clear()
-            return self.j({"search": SEARCH.settings(app), "ai": AI.settings(app), "search_status": SEARCH.status(app),
-                           "secrets": {n: masked(n) for n in ("search_serper", "search_brave", "search_tavily", "ai_openai", "ai_anthropic")},
-                           "threads_default": RUNNER.threads_default, "is_admin": bool(sess["is_admin"])})
+                    allowed = ("off", "openai", "anthropic", "mock") + (("claude-cli", "codex-cli") if AI.cli_allowed() else ())
+                    if s["provider"] not in allowed:
+                        raise HTTPError(400, "That AI provider isn't available on this server.")
+                    db.set_setting(app, f"ai:w{wid}", jdump(s))
+                if "contacts" in b:
+                    s = CONTACTS.settings(app, wid)
+                    s.update({k: b["contacts"][k] for k in ("provider", "approved", "monthly_cap_usd", "usd_per_lookup", "per_company") if k in b["contacts"]})
+                    if s["provider"] not in ("site", "apollo", "hunter"):
+                        raise HTTPError(400, "unknown contacts provider")
+                    db.set_setting(app, f"contacts:w{wid}", jdump(s))
+                db.audit(app, sess["user_id"], wid, "settings", jdump(b))
+                invalidate(wid)
+            return self.j({"search": SEARCH.settings(app, wid), "ai": AI.settings(app, wid), "contacts": CONTACTS.settings(app, wid), "search_status": SEARCH.status(app, wid),
+                           "secrets": {n: masked(f"{n}_w{wid}") for n in SECRET_NAMES}, "cli_allowed": AI.cli_allowed(),
+                           "threads_default": RUNNER.threads_default, "is_admin": auth.role(app, sess["user_id"], wid) == "owner" or bool(sess["is_admin"])})
         if p == "/api/settings/secret" and method == "POST":
-            if not sess["is_admin"]:
-                raise HTTPError(403, "Only an admin can save credentials.")
+            wid, ws = self.ws_of(app, sess, "owner")
+            ws.close()
             b = self.json_body()
-            if b.get("name") not in ("search_serper", "search_brave", "search_tavily", "ai_openai", "ai_anthropic"):
+            if b.get("name") not in SECRET_NAMES:
                 raise HTTPError(400, "unknown credential")
-            set_secret(b["name"], (b.get("value") or "").strip())
-            db.audit(app, sess["user_id"], None, "secret.set", b["name"])
-            return self.j({"ok": True, "masked": masked(b["name"])})
+            set_secret(f"{b['name']}_w{wid}", (b.get("value") or "").strip())
+            db.audit(app, sess["user_id"], wid, "secret.set", b["name"])
+            return self.j({"ok": True, "masked": masked(f"{b['name']}_w{wid}")})
         if p == "/api/settings/test-ai" and method == "POST":
-            ok, msg, secs = AI.client(app).health(app)
+            wid, ws = self.ws_of(app, sess)
+            ws.close()
+            ok, msg, secs = AI.client(app, wid).health(app)
             return self.j({"ok": ok, "message": msg, "seconds": secs})
         if p == "/api/settings/test-search" and method == "POST":
             wid, ws = self.ws_of(app, sess)
@@ -484,7 +537,10 @@ class Handler(BaseHTTPRequestHandler):
             finally:
                 ws.close()
         if p == "/api/usage":
-            rows = [dict(r) for r in app.execute("SELECT provider, kind, substr(at,1,7) AS month, count(*) AS calls, sum(ok) AS ok, round(sum(usd),4) AS usd FROM usage GROUP BY 1,2,3 ORDER BY 3 DESC")]
+            wid, ws = self.ws_of(app, sess)
+            ws.close()
+            rows = [dict(r) for r in app.execute("SELECT provider, kind, substr(at,1,7) AS month, count(*) AS calls, sum(ok) AS ok, round(sum(usd),4) AS usd FROM usage "
+                                                 "WHERE workspace_id=? GROUP BY 1,2,3 ORDER BY 3 DESC", (wid,))]
             return self.j({"usage": rows})
         raise HTTPError(404, "not found")
 
@@ -537,6 +593,10 @@ class Handler(BaseHTTPRequestHandler):
                            "rules": schema.describe(cfg), "errors": schema.validate(cfg)})
         if method == "PUT":
             b = self.json_body()
+            if b.get("answers") and not b.get("config"):
+                b["config"] = wizard.build_config(b["answers"])
+                with ws:
+                    ws.execute("UPDATE profiles SET answers=? WHERE id=?", (jdump(b["answers"]), pid))
             cfg = schema.normalize(b.get("config") or {})
             errs = schema.validate(cfg)
             if errs:
@@ -635,6 +695,27 @@ class Handler(BaseHTTPRequestHandler):
                                  extra={"Content-Disposition": 'attachment; filename="accounts.xlsx"'})
             return self.send(EXP.to_csv(rows, cols, labels), "text/csv; charset=utf-8", extra={"Content-Disposition": 'attachment; filename="accounts.csv"'})
         name = p.removeprefix("/export/")
+        if name.startswith("DECISION_MAKERS."):
+            ws = db.ws_db(wid)
+            try:
+                live = {a["id"]: a for a in c["accts"] if a["stage"] != "MERGED"}
+                rows = [dict(r) for r in ws.execute("SELECT * FROM contacts ORDER BY account_id, committee='', name=''") if r["account_id"] in live]
+            finally:
+                ws.close()
+            head = ["Company", "Website", "Stage", "Priority", "Fit_Score", "Name", "Title", "Buying_Committee_Match", "Email", "Phone", "Source", "Source_URL", "Status", "Confidence"]
+            body = [[EXP.safe(x) for x in (live[r["account_id"]]["name"], live[r["account_id"]]["domain"], live[r["account_id"]]["stage"], live[r["account_id"]]["pr"],
+                                           live[r["account_id"]].get("opp"), r["name"], r["title"], r["committee"], r["email"], r["phone"], r["source"], r["source_url"], r["status"], r["confidence"])]
+                    for r in rows]
+            if name.endswith(".xlsx"):
+                return self.send(EXP.xlsx_rows(head, body, "Decision makers"), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                                 extra={"Content-Disposition": f'attachment; filename="{name}"'})
+            import csv as _csv
+            import io as _io
+            f = _io.StringIO()
+            w = _csv.writer(f)
+            w.writerow(head)
+            w.writerows(body)
+            return self.send(f.getvalue(), "text/csv; charset=utf-8", extra={"Content-Disposition": f'attachment; filename="{name}"'})
         if name == "MANIFEST.json":
             return self.send(EXP.manifest(fm, cols, labels), "application/json", extra={"Content-Disposition": 'attachment; filename="MANIFEST.json"'})
         mm = re.fullmatch(r"([A-Z0-9_]+)\.(csv|xlsx)", name)

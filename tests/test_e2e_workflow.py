@@ -10,7 +10,7 @@ PW = "correct-horse-battery"
 FLEET = {"company_name": "Acme Telematics", "sells": "GPS fleet tracking", "pack": "logistics", "industries": [],
          "signals": [{"id": "fleet", "label": "Operates a vehicle fleet", "category": "operational", "patterns": ["our fleet", "fleet of", "service vans"], "requirement": "mandatory", "weight": 20},
                      {"id": "drivers_hiring", "label": "Hiring drivers", "category": "buying", "patterns": ["now hiring drivers", "cdl"], "requirement": "preferred", "weight": 15}],
-         "competitors": ["Samsara"], "competitor_stance": "prospect", "disqualifiers": ["agency"], "evidence_level": "standard",
+         "competitors": ["Samsara"], "competitor_stance": "prospect", "titles": ["Fleet Manager"], "departments": ["Operations"], "disqualifiers": ["agency"], "evidence_level": "standard",
          "sources": {"sitemap": False, "search": False, "discover": False}}
 CLINIC = {"company_name": "SchedulePro", "sells": "patient scheduling", "pack": "healthcare",
           "signals": [{"id": "online_booking", "label": "Online appointment booking", "category": "behavioral", "patterns": ["book an appointment", "book online", "schedule online"],
@@ -81,6 +81,9 @@ def test_full_workflow_three_icps(server):
     assert ff["url"].startswith("https://fastfleet-hvac.com"), ff
     assert "Samsara" in ff["vend"]
     assert ff["ea"]["s"] == "PASS" and ff["stage"] == "READY", ff
+    assert ff["npl"] >= 2 and ff["dmc"] >= 1 and "jane.smith@fastfleet-hvac.com" in ff["dm"], ff
+    st, dm = c.call("GET", "/export/DECISION_MAKERS.csv", raw=True)
+    assert st == 200 and b"Jane Smith" in dm and b"Fleet Manager" in dm
     assert A["DeskOnly Consulting"]["stage"] in ("REVIEW", "DQ")
     assert A["No Website Plumbing"]["stage"] == "PENDING_WEBSITE"
     merged = [x for x in c.call("GET", "/api/accounts.json")[1] if x["stage"] == "MERGED"]
@@ -134,6 +137,19 @@ def test_full_workflow_three_icps(server):
         time.sleep(0.3)
     time.sleep(11)
     assert accounts(c)["Metro Credit Union"]["stage"] == "REVIEW"
+
+
+def test_signup_creates_private_workspace(server):
+    c = Client(server["base"])
+    st, b = c.call("POST", "/api/signup", {"name": "Pat", "email": "pat@customer.example", "password": "another-long-password", "workspace": "Pat Co"})
+    assert st == 200, b
+    c.csrf = c.call("GET", "/api/me")[1]["csrf"]
+    me = c.call("GET", "/api/me")[1]
+    assert [w["name"] for w in me["workspaces"]] == ["Pat Co"]
+    assert c.call("GET", "/api/profiles")[1]["profiles"] == []          # nothing from other customers
+    st, s = c.call("GET", "/api/settings")
+    assert st == 200 and s["is_admin"] and s["ai"]["provider"] == "off"   # owner of their own workspace, own provider settings
+    assert c.call("POST", "/api/settings", {"ai": {"provider": "claude-cli"}})[0] == 400   # server's own CLI is not offered to customers
 
 
 def test_auth_and_csrf(server):

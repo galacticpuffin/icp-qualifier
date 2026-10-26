@@ -16,6 +16,7 @@ import traceback
 
 from . import db
 from .engine import ai as AI
+from .engine import contacts as CONTACTS
 from .engine import extract
 from .engine.audit import audit
 from .engine.fetch import Fetcher
@@ -112,6 +113,17 @@ def process_account(ws, app_factory, wid, icp, pver, pid, acct, mode, ai_client=
             note = f"AI review skipped: {e}"
         finally:
             app.close()
+    people, cnote = None, ""
+    if v["priority"] in ("A", "B", "C", "HOLD"):
+        had = ws.execute("SELECT count(*) FROM contacts WHERE account_id=?", (acct["id"],)).fetchone()[0]
+        if not (cache_only and had):
+            app = app_factory()
+            try:
+                people, cnote, _ = CONTACTS.gather(app, wid, icp.cfg, fetcher, res["pages"], acct, use_provider=not cache_only)
+            except Exception as e:
+                cnote = f"contact search failed: {type(e).__name__}"
+            finally:
+                app.close()
     evrows = [e for e in res["evidence"]][:40]
     with ws:
         ws.execute("DELETE FROM evidence WHERE account_id=?", (acct["id"],))
@@ -131,6 +143,11 @@ def process_account(ws, app_factory, wid, icp, pver, pid, acct, mode, ai_client=
         if prev is None or prev["priority"] != v["priority"]:
             ws.execute("INSERT INTO verdict_history(account_id,changed_at,change,old_priority,new_priority,note) VALUES(?,?,?,?,?,?)",
                        (acct["id"], now(), mode, prev["priority"] if prev else None, v["priority"], f"profile v{pver}: {v['status'][:200]}"))
+        if people is not None:
+            ws.execute("DELETE FROM contacts WHERE account_id=?", (acct["id"],))
+            ws.executemany("INSERT INTO contacts(account_id,name,title,committee,email,phone,source,source_url,status,confidence,found_at) VALUES(?,?,?,?,?,?,?,?,?,?,?)",
+                           [(acct["id"], c["name"], c["title"], c["committee"], c["email"], c["phone"], c["source"], c["source_url"], c["status"], c["confidence"], now()) for c in people])
+            ws.execute("UPDATE research SET contacts_note=? WHERE account_id=?", (cnote, acct["id"]))
         search_state = res["search_state"]
         if cache_only and search_state == "pending":
             note = "new searches needed for this profile: start a research or retry run"
@@ -198,7 +215,7 @@ class Runner:
                                   AND (state='failed' OR (state='done' AND (crawl_ok=0 OR search_state='pending')))""", (run["list_id"],))
             app = db.app_db()
             try:
-                aic = AI.client(app) if icp.cfg["ai"]["use"] == "shadow" and AI.settings(app)["provider"] != "off" else None
+                aic = AI.client(app, wid) if icp.cfg["ai"]["use"] == "shadow" and AI.settings(app, wid)["provider"] != "off" else None
             finally:
                 app.close()
             n = max(1, min(32, int(run["threads"] or self.threads_default)))

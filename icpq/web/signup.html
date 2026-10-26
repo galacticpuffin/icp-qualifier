@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Sign up</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="/static/orig.css">
+<link rel="stylesheet" href="/static/app.css">
+</head><body>
+<div class="wrap">
+  <main class="wiz" style="max-width:420px;margin-top:8vh">
+    <div class="brandrow"><span class="mono">IQ</span><span class="sep"></span><h1 class="brand">ICP QUALIFIER</h1></div>
+    <form class="panel" id="f" style="display:flex;flex-direction:column;gap:12px">
+      <label class="f">Your name<input class="in" id="n" autocomplete="name"></label>
+      <label class="f">Work e-mail<input class="in" id="e" type="email" autocomplete="username" required></label>
+      <label class="f">Password (10+ characters)<input class="in" id="p" type="password" autocomplete="new-password" required></label>
+      <label class="f">Company / workspace name<input class="in" id="w"></label>
+      <button class="btn primary" type="submit">Create my account</button><span class="small err" id="m"></span>
+      <a class="link" href="/login">I already have an account</a>
+    </form>
+  </main>
+</div>
+<script src="/static/common.js"></script>
+<script src="/static/auth.js"></script>
+</body></html>

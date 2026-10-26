@@ -27,9 +27,9 @@ class SearchUnavailable(Exception):
     pass
 
 
-def settings(app):
+def settings(app, wid=None):
     from ..db import get_setting
-    s = json.loads(get_setting(app, "search", "{}") or "{}")
+    s = json.loads(get_setting(app, f"search:w{int(wid)}" if wid else "search", "{}") or "{}")
     s.setdefault("provider", "none")
     s.setdefault("approved", False)
     s.setdefault("monthly_cap_usd", 0)
@@ -38,18 +38,19 @@ def settings(app):
     return s
 
 
-def month_spend(app, provider):
+def month_spend(app, provider, wid=None):
     m = now()[:7]
-    r = app.execute("SELECT COALESCE(sum(usd),0) FROM usage WHERE provider=? AND kind='search' AND substr(at,1,7)=?", (provider, m)).fetchone()
+    r = app.execute("SELECT COALESCE(sum(usd),0) FROM usage WHERE provider=? AND kind='search' AND substr(at,1,7)=? AND COALESCE(workspace_id,0)=COALESCE(?,0)",
+                    (provider, m, wid)).fetchone()
     return round(r[0] or 0, 4)
 
 
-def status(app):
-    s = settings(app)
+def status(app, wid=None):
+    s = settings(app, wid)
     out = {"provider": s["provider"], "approved": bool(s["approved"]), "cap": s["monthly_cap_usd"], "usd_per_1k": s["usd_per_1k"]}
-    out["this_month_usd"] = month_spend(app, s["provider"])
-    ok_fail = app.execute("SELECT sum(ok), sum(1-ok) FROM usage WHERE kind='search' AND at>=?",
-                          (time.strftime("%Y-%m-%dT%H:%M:%S", time.gmtime(time.time() - 3600)),)).fetchone()
+    out["this_month_usd"] = month_spend(app, s["provider"], wid)
+    ok_fail = app.execute("SELECT sum(ok), sum(1-ok) FROM usage WHERE kind='search' AND at>=? AND COALESCE(workspace_id,0)=COALESCE(?,0)",
+                          (time.strftime("%Y-%m-%dT%H:%M:%S", time.gmtime(time.time() - 3600)), wid)).fetchone()
     out["last_60_min"] = [ok_fail[0] or 0, ok_fail[1] or 0]
     eng = app.execute("SELECT * FROM search_engines").fetchall()
     out["engines"] = {e["engine"]: {"paused_for_min": max(0, round(((e["paused_until"] or 0) - time.time()) / 60, 1)), "gap_s": s["gap_s"]} for e in eng}
@@ -64,7 +65,7 @@ class Searcher:
     def enabled(self):
         app = self.app_factory()
         try:
-            s = settings(app)
+            s = settings(app, self.wid)
         finally:
             app.close()
         if s["provider"] == "none":
@@ -77,7 +78,7 @@ class Searcher:
         """-> list of URLs. Raises SearchUnavailable when the provider is off, capped, paused or failing."""
         app = self.app_factory()
         try:
-            s = settings(app)
+            s = settings(app, self.wid)
             prov = s["provider"]
             r = self.ws.execute("SELECT urls, error FROM searches WHERE q=? AND provider=?", (q, prov)).fetchone()
             if r and not r["error"]:
@@ -89,7 +90,7 @@ class Searcher:
                     raise SearchUnavailable(f"{prov} is not approved in Settings")
                 cost = float(s["usd_per_1k"] or PRICES[prov]) / 1000
                 with _gov_lock:
-                    if month_spend(app, prov) + cost > float(s["monthly_cap_usd"] or 0):
+                    if month_spend(app, prov, self.wid) + cost > float(s["monthly_cap_usd"] or 0):
                         raise SearchUnavailable(f"{prov} monthly cap ${s['monthly_cap_usd']} reached")
                     with app:
                         app.execute("INSERT INTO usage(at,provider,kind,workspace_id,units,usd,ok,note) VALUES(?,?,?,?,?,?,?,?)",
@@ -139,7 +140,7 @@ class Searcher:
 
     def _licensed(self, prov, q, app):
         from ..secrets import get_secret
-        key = get_secret(f"search_{prov}")
+        key = get_secret(f"search_{prov}:w{int(self.wid)}".replace(":", "_") if self.wid else f"search_{prov}")
         if not key:
             return [], "no API key saved"
         try:
