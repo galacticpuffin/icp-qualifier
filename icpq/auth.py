@@ -130,3 +130,14 @@ def logout(app, tok):
 def role(app, user_id, ws_id):
     r = app.execute("SELECT role FROM members WHERE user_id=? AND workspace_id=?", (user_id, ws_id)).fetchone()
     return r[0] if r else None
+
+
+def local_session(app):
+    """ICPQ_NO_AUTH=1: one local admin, created on first use with a random password nobody needs."""
+    u = app.execute("SELECT id FROM users WHERE is_admin=1 ORDER BY id LIMIT 1").fetchone()
+    if u:
+        uid = u[0]
+    else:
+        uid = create_user(app, "local@localhost.local", secrets.token_urlsafe(24), "Local user", admin=True)
+        create_workspace(app, "My workspace", uid)
+    return new_session(app, uid)

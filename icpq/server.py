@@ -32,6 +32,7 @@ log = logging.getLogger("icpq.server")
 WEB = Path(__file__).resolve().parent / "web"
 MAX_UPLOAD = int(os.environ.get("ICPQ_MAX_UPLOAD_MB", "25")) * 1024 * 1024
 RUNNER = Runner()
+NO_AUTH = os.environ.get("ICPQ_NO_AUTH") == "1"
 _cache = {}
 _cache_lock = threading.Lock()
 CSP = ("default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; "
@@ -93,6 +94,10 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Content-Security-Policy", CSP)
         for k, v in (extra or {}).items():
             self.send_header(k, v)
+        if getattr(self, "_new_cookie", None) and not any(k == "Set-Cookie" for k in (extra or {})):
+            for k, v in self.set_session_cookie(self._new_cookie).items():
+                self.send_header(k, v)
+            self._new_cookie = None
         self.send_header("Content-Length", str(len(b)))
         self.end_headers()
         if self.command != "HEAD":
@@ -154,6 +159,18 @@ class Handler(BaseHTTPRequestHandler):
             if p.startswith("/static/"):
                 return self.static(p)
             sess = auth.session(app, self.cookie("icpq"))
+            if not sess and NO_AUTH:          # single-user local mode: sign in automatically as the local admin
+                tok = auth.local_session(app)
+                if p in ("/login", "/setup"):
+                    self.send_response(303)
+                    self.send_header("Location", "/")
+                    for k, v in self.set_session_cookie(tok).items():
+                        self.send_header(k, v)
+                    self.send_header("Content-Length", "0")
+                    self.end_headers()
+                    return
+                self._new_cookie = tok
+                sess = auth.session(app, tok)
             if p not in PUBLIC and not sess:
                 if p.startswith("/api/") or p.startswith("/export/"):
                     raise HTTPError(401, "Sign in first.")
@@ -242,6 +259,8 @@ class Handler(BaseHTTPRequestHandler):
             b = self.json_body()
             tok = auth.login(app, b.get("email"), b.get("password"), self.ip())
             return self.j({"ok": True}, extra=self.set_session_cookie(tok))
+        if p == "/api/logout" and method == "POST" and NO_AUTH:
+            return self.j({"ok": True})
         if p == "/api/logout" and method == "POST":
             auth.logout(app, self.cookie("icpq"))
             return self.j({"ok": True}, extra=self.set_session_cookie("", clear=True))
@@ -627,6 +646,10 @@ def serve(host=None, port=None, run_workers=True):
             log.warning("FIRST RUN: open http://%s:%s/setup and enter the setup code %s (also in %s)", host, port, auth.setup_code(), db.data_dir() / "SETUP_CODE")
     finally:
         app.close()
+    global NO_AUTH
+    if NO_AUTH and host not in ("127.0.0.1", "localhost", "::1"):
+        log.warning("ICPQ_NO_AUTH ignored: no-login mode only works on localhost (ICPQ_HOST=%s)", host)
+        NO_AUTH = False
     if run_workers and os.environ.get("ICPQ_RUN_WORKERS", "1") == "1":
         RUNNER.start()
     httpd = ThreadingHTTPServer((host, port), Handler)
