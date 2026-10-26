@@ -22,13 +22,13 @@
         <div class="row"><div class="seg" role="group" aria-label="Editor"><button type="button" id="tabForm" aria-pressed="true">Signals</button><button type="button" id="tabJson" aria-pressed="false">Everything (JSON)</button></div></div>
         <div id="formEd"></div>
         <textarea class="in code hidden" id="jsonEd" spellcheck="false" aria-label="Profile JSON"></textarea>
-        <label class="f">Change note<input class="in" id="note" placeholder="e.g. Added telehealth as preferred"></label>
+        <label class="f">Change note<input class="in" id="note"></label>
         <div class="row"><button class="btn" id="check" type="button">Check</button><button class="btn primary" id="saveP" type="button">Save new version</button><span class="small" id="pmsg"></span></div>
         <div class="row"><span class="small muted">Then requalify a list with it:</span><select class="in" style="width:auto" id="rqList"></select><button class="btn" id="rq" type="button">Requalify (no re-download)</button></div>
       </div>
     </div>
     <div class="panel"><h3>Try the rules on any text</h3>
-      <div class="grid3"><label class="f">Company<input class="in" id="tName" value="Example Co"></label><label class="f">Its website<input class="in" id="tDom" value="example.com"></label><label class="f">Page URL<input class="in" id="tUrl" value="https://example.com/terms"></label></div>
+      <div class="grid3"><label class="f">Company<input class="in" id="tName"></label><label class="f">Its website<input class="in" id="tDom"></label><label class="f">Page URL<input class="in" id="tUrl"></label></div>
       <label class="f" style="margin-top:10px">Page text<textarea class="in" id="tText" placeholder="Paste text from a prospect's web page"></textarea></label>
       <div class="row" style="margin-top:10px"><button class="btn" id="tRun" type="button">Test</button><span class="small" id="tGate"></span></div>
       <ul class="evl" id="tOut" style="margin-top:10px"></ul>

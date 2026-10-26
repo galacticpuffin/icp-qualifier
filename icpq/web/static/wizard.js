@@ -55,8 +55,8 @@ function signalCards(category){
         <div class="sig" style="${on ? "border-color:var(--accent-line);background:var(--accent-soft)" : ""}"><div class="hd"><b>${on ? "✓ " : "+ "}${esc(s.label)}</b><span class="faint small">${esc(s.category)}</span></div>
         <div class="pats">looks for: ${s.patterns.slice(0, 5).map(p => esc(p.replace(/^re:/, "pattern "))).join(" · ")}</div></div></button>`; }).join("") +
       mine.map(s => `<div class="sig"><div class="hd"><b>${esc(s.label)}</b><button class="link" type="button" data-del="${esc(s.id)}">Remove</button></div><div class="pats">looks for: ${s.patterns.map(esc).join(" · ")}</div></div>`).join("") +
-      `<div class="sig"><b class="small">Add your own</b><div class="grid2"><label class="f">What is it?<input class="in" id="nl" placeholder="${category === "problem" ? "e.g. Paper-based inspections" : category === "buying" ? "e.g. Hiring field technicians" : "e.g. Offers online booking"}"></label>
-        <label class="f">Words their website would show (comma separated)<input class="in" id="np" placeholder="${category === "problem" ? "paper forms, clipboard, manual inspection" : "now hiring technicians, technician jobs"}"></label></div>
+      `<div class="sig"><b class="small">Add your own</b><div class="grid2"><label class="f">What is it?<input class="in" id="nl" placeholder=""></label>
+        <label class="f">Words their website would show (comma separated)<input class="in" id="np" placeholder=""></label></div>
         ${category === "any" ? `<label class="f">Kind of signal<select class="in" id="nc">${W.categories.filter(c => !["problem", "buying"].includes(c)).map(c => `<option>${c}</option>`).join("")}</select></label>` : ""}
         <div class="row"><button class="btn" type="button" id="nadd">Add signal</button><button class="link" type="button" id="aisug">Suggest with AI</button><span class="small faint" id="aimsg"></span></div></div>`;
     wrap.querySelectorAll("[data-id]").forEach(b => b.onclick = () => { const s = sugg.find(x => x.id === b.dataset.id); const i = chosen.findIndex(c => c.id === s.id);
@@ -107,12 +107,11 @@ async function show(){
   const sug = k => k === "industries" ? P.industries : k === "technologies" ? P.technologies : k === "titles" ? P.titles : k === "departments" ? P.departments : [];
   switch (q.kind){
     case "fields": q.fields.forEach(f => B.appendChild(field(f.k, f.label, f.ph, f.long))); break;
-    case "longtext": { B.appendChild(field(q.k, "", "", true)); if (P.ideal) { const b = document.createElement("button"); b.className = "chip add"; b.type = "button"; b.textContent = "Use example: " + P.ideal; b.onclick = () => { A[q.k] = P.ideal; show(); }; B.appendChild(b); } break; }
+    case "longtext": B.appendChild(field(q.k, "", "", true)); break;
     case "pack": {
-      if (!A.pack) { try { A.pack = (await api("/api/wizard/guess", {method: "POST", body: A})).pack; } catch (e) { A.pack = "generic"; } }
       B.appendChild(choice("pack", W.packs.map(p => [p.id, p.label]), () => show()));
-      B.appendChild(field("market_text", "In your own words (optional)", "e.g. Fleet telematics for HVAC and plumbing companies"));
-      const n = document.createElement("p"); n.className = "small faint"; n.textContent = A.pack && A.pack !== "generic" ? `Suggestions from “${P.label}” will appear as one-click chips in the next questions.` : "You'll add your own criteria in the next questions."; B.appendChild(n); break; }
+      B.appendChild(field("market_text", "In your own words (optional)", ""));
+      const n = document.createElement("p"); n.className = "small faint"; n.textContent = A.pack && A.pack !== "generic" ? `Optional suggestions from “${P.label}” will appear as chips you can click.` : "Optional: pick a market to get suggestion chips, or skip and type your own."; B.appendChild(n); break; }
     case "tags": B.appendChild(tagInput(q.k, sug(q.suggest))); break;
     case "tags2": q.fields.forEach(f => { const h = document.createElement("div"); h.className = "small muted"; h.textContent = f.label; B.appendChild(h); B.appendChild(tagInput(f.k, sug(f.suggest))); }); break;
     case "ranges": {
@@ -132,7 +131,7 @@ async function show(){
       break; }
     case "roles": B.appendChild(rolesEditor()); break;
     case "expression": {
-      B.appendChild(field("gate_expression", "Rule", "e.g. " + ((A.signals || []).slice(0, 2).map(s => s.id).join(" AND ") || "signal_a AND signal_b")));
+      B.appendChild(field("gate_expression", "Rule", ""));
       const h = document.createElement("p"); h.className = "small faint"; h.innerHTML = "Signal names: " + (A.signals || []).map(s => `<code>${esc(s.id)}</code>`).join(", "); B.appendChild(h); break; }
     case "priority": {
       B.appendChild(choice("priority_mode", [["size", "By company size (A = large, B = meaningful, C = rest)"], ["score", "By fit score"], ["signals", "By key signals"]], () => show()));

@@ -18,7 +18,7 @@ for _ in range(100):
     except Exception: time.sleep(0.2)
 try:
     c = Client(base); c.login("demo@example.com", "demo-password-123")
-    for ans, csvf in ((T.FLEET, "fleet_list.csv"), (T.CLINIC, "clinic_list.csv"), (T.MSG, "messaging_list.csv")):
+    for ans, csvf in [] if "--empty" in sys.argv else ((T.FLEET, "fleet_list.csv"), (T.CLINIC, "clinic_list.csv"), (T.MSG, "messaging_list.csv")):
         T.run_list(c, csvf, T.build_profile(c, dict(ans)))
     time.sleep(11)
     S = c.call("GET", "/api/summary.json")[1]
@@ -31,11 +31,10 @@ W = ROOT / "icpq/web"
 html = (W / "master.html").read_text()
 body = html.split('<div class="wrap">', 1)[1].split('<script src=')[0]
 body = body.replace('<nav class="nav" id="nav" aria-label="Main"></nav>',
-                    '<p class="snapnote">Read-only snapshot of the ICP Qualifier dashboard with demo data (three example lists, each qualified with its own ICP profile). '
-                    'Filters, search, sorting and row details all work. Research, the ICP wizard, uploads and exports run in the app itself.</p>')
+                    '<p class="snapnote">ICP Qualifier dashboard. This view is read-only. Set up your ICP, upload your list and run research in the app (http://localhost:8890); your results appear here once you publish a new snapshot.</p>')
 css = (W / "static/orig.css").read_text() + (W / "static/app.css").read_text() + """
 body{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
-.edit,#exp,#expx,.results details.btn{display:none!important}
+.edit,#exp,#expx,.results details.btn,#sigForm{display:none!important}
 .snapnote{margin:0;font-size:.82rem;color:var(--muted);border:1px solid var(--line-2);border-radius:10px;padding:10px 14px;background:var(--surface)}
 """
 js = (W / "static/master.js").read_text()

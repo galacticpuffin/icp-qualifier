@@ -44,8 +44,8 @@
     <div class="inds" id="sgx"></div>
     <form class="panel" id="sigForm" style="display:flex;flex-direction:column;gap:10px">
       <h3 style="margin:0">Add a signal search</h3>
-      <div class="grid3"><label class="f">Signal name<input class="in" id="sgName" placeholder="e.g. Uses online booking" required></label>
-        <label class="f">Phrases to find on their website (comma separated)<input class="in" id="sgPats" placeholder="book online, schedule an appointment" required></label>
+      <div class="grid3"><label class="f">Signal name<input class="in" id="sgName" required></label>
+        <label class="f">Phrases to find on their website (comma separated)<input class="in" id="sgPats" required></label>
         <label class="f">Role<select class="in" id="sgReq"><option value="preferred">Raises score (nice to have)</option><option value="mandatory">Must have to qualify</option><option value="negative">Counts against</option></select></label></div>
       <div class="row"><label class="f" style="flex-direction:row;align-items:center;gap:8px">Weight <input class="in" id="sgW" type="number" min="0" max="100" value="15" style="width:90px"></label>
         <button class="btn primary" type="submit" id="sgGo">Add and rescore all accounts</button><span class="small" id="sgMsg"></span></div>
@@ -56,11 +56,6 @@
   <section class="sec" aria-labelledby="h-sig" style="display:none">
     <div class="sh"><h2 id="h-sig">Verified buying signals</h2><span class="sm" style="color:var(--faint);font-size:.8rem">Use cases on verified rows (qualified + hold)</span></div>
     <div class="inds" id="sigs"></div>
-  </section>
-
-  <section class="sec" aria-labelledby="h-ind">
-    <div class="sh"><h2 id="h-ind">Industry breakdown</h2><span class="sm" style="color:var(--faint);font-size:.8rem">List industry · processed accounts · <em style="font-style:normal;color:var(--accent)">qualified</em></span></div>
-    <div class="inds" id="inds"></div>
   </section>
 
   <section class="results" aria-labelledby="ttl">
@@ -95,14 +90,21 @@
     <div class="more" id="moreBox"><span id="shown"></span><button class="btn" id="more" type="button">Show 100 more</button></div>
   </section>
 
+  <details id="more-details">
+    <summary>More details: industries, reconciliation, method</summary>
+    <div style="display:flex;flex-direction:column;gap:28px;margin-top:18px">
+  <section class="sec" aria-labelledby="h-ind">
+    <div class="sh"><h2 id="h-ind">Industry breakdown</h2><span class="sm" style="color:var(--faint);font-size:.8rem">List industry · processed accounts · <em style="font-style:normal;color:var(--accent)">qualified</em></span></div>
+    <div class="inds" id="inds"></div>
+  </section>
+
   <section class="sec" aria-labelledby="h-rec">
     <div class="sh"><h2 id="h-rec">Source reconciliation — every original row has a visible state</h2></div>
     <div class="recon-grid" id="recon"></div>
   </section>
 
-  <details id="rdet">
-    <summary>Research details</summary>
-    <dl class="rd" id="rd"></dl>
+  <dl class="rd" id="rd"></dl>
+    </div>
   </details>
 </div>
 

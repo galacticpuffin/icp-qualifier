@@ -267,7 +267,7 @@ class Handler(BaseHTTPRequestHandler):
         if p == "/api/me":
             wss = [dict(r) for r in app.execute("SELECT w.id, w.name, m.role FROM workspaces w JOIN members m ON m.workspace_id=w.id WHERE m.user_id=? ORDER BY w.id", (sess["user_id"],))]
             return self.j({"email": sess["email"], "name": sess["name"], "is_admin": bool(sess["is_admin"]), "csrf": sess["csrf"],
-                           "workspace_id": sess["workspace_id"], "workspaces": wss, "version": __version__})
+                           "workspace_id": sess["workspace_id"], "workspaces": wss, "version": __version__, "no_auth": NO_AUTH})
         if p == "/api/workspaces" and method == "POST":
             b = self.json_body()
             wid = auth.create_workspace(app, b.get("name") or "Workspace", sess["user_id"])

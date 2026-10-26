@@ -41,7 +41,7 @@ try:
         pg.get_by_role("button", name="Logistics / fleet / transportation").click()
         pg.screenshot(path=str(out / "wizard_market.png"))
         pg.click("#next")                                   # ideal
-        pg.locator(".chip.add").first.click(); pg.click("#next")
+        pg.locator("#qbody textarea").fill("Service companies running their own vans"); pg.click("#next")
         for _ in range(6):                                  # industries, exclude, size, locations, tech, competitors
             pg.click("#skip")
         pg.click("#skip")                                   # problems

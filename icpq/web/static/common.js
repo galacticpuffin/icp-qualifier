@@ -23,10 +23,10 @@ async function loadMe() {
 
 function nav(current) {
   const el = $("nav"); if (!el || !ME) return;
-  const links = [["/", "Dashboard"], ["/lists", "Lists & runs"], ["/profiles", "ICP profiles"], ["/wizard", "New ICP"], ["/settings", "Settings"]];
+  const links = [["/", "Dashboard"], ["/lists", "Upload & runs"], ["/profiles", "ICP profiles"], ["/settings", "Settings"]];
   el.innerHTML = links.map(([h, l]) => `<a href="${h}"${h === current ? ' aria-current="page"' : ""}>${l}</a>`).join("") +
     `<span class="sp"></span><select id="wsPick" aria-label="Workspace">${ME.workspaces.map(w => `<option value="${w.id}"${w.id === ME.workspace_id ? " selected" : ""}>${esc(w.name)}</option>`).join("")}<option value="new">+ New workspace…</option></select>` +
-    `<button class="link" id="signout" type="button">Sign out</button>`;
+    (ME.no_auth ? "" : `<button class="link" id="signout" type="button">Sign out</button>`);
   $("wsPick").onchange = async e => {
     if (e.target.value === "new") {
       const n = prompt("Name of the new workspace (its lists, profiles and results are kept completely separate):");
@@ -37,7 +37,7 @@ function nav(current) {
     await api("/api/workspaces/switch", {method: "POST", body: {id: +e.target.value}});
     location.reload();
   };
-  $("signout").onclick = async () => { await api("/api/logout", {method: "POST"}); location.href = "/login"; };
+  if ($("signout")) $("signout").onclick = async () => { await api("/api/logout", {method: "POST"}); location.href = "/login"; };
 }
 
 function download(blob, name) {
