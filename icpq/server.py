@@ -42,6 +42,18 @@ PAGES = {"/": "master.html", "/index.html": "master.html", "/wizard": "wizard.ht
 PUBLIC = {"/login", "/setup", "/healthz", "/readyz", "/api/login", "/api/setup", "/api/setup-state"}
 
 
+def private_ok(addr):
+    """Loopback or Tailscale CGNAT range (100.64.0.0/10): the only places no-login mode may listen or accept from."""
+    import ipaddress
+    if addr == "localhost":
+        return True
+    try:
+        ip = ipaddress.ip_address(addr.split("%")[0].removeprefix("::ffff:"))
+    except ValueError:
+        return False
+    return ip.is_loopback or ip in ipaddress.ip_network("100.64.0.0/10")
+
+
 class HTTPError(Exception):
     def __init__(self, code, msg):
         super().__init__(msg)
@@ -149,6 +161,8 @@ class Handler(BaseHTTPRequestHandler):
         self.route("DELETE")
 
     def route(self, method):
+        if NO_AUTH and not private_ok(self.client_address[0]):
+            return self.send("Forbidden", "text/plain", 403)
         u = urlparse(self.path)
         p, q = u.path, parse_qs(u.query)
         app = db.app_db()
@@ -647,15 +661,21 @@ def serve(host=None, port=None, run_workers=True):
     finally:
         app.close()
     global NO_AUTH
-    if NO_AUTH and host not in ("127.0.0.1", "localhost", "::1"):
-        log.warning("ICPQ_NO_AUTH ignored: no-login mode only works on localhost (ICPQ_HOST=%s)", host)
+    hosts = [h.strip() for h in host.split(",") if h.strip()]
+    if NO_AUTH and not all(private_ok(h) for h in hosts):
+        log.warning("ICPQ_NO_AUTH ignored: no-login mode only binds to localhost or a Tailscale (100.64.0.0/10) address (ICPQ_HOST=%s)", host)
         NO_AUTH = False
     if run_workers and os.environ.get("ICPQ_RUN_WORKERS", "1") == "1":
         RUNNER.start()
-    httpd = ThreadingHTTPServer((host, port), Handler)
-    httpd.daemon_threads = True
-    log.info("ICP Qualifier %s listening on http://%s:%s/", __version__, host, port)
+    servers = []
+    for h in hosts:
+        httpd = ThreadingHTTPServer((h, port), Handler)
+        httpd.daemon_threads = True
+        servers.append(httpd)
+        log.info("ICP Qualifier %s listening on http://%s:%s/", __version__, h, port)
+    for extra in servers[1:]:
+        threading.Thread(target=extra.serve_forever, daemon=True).start()
     try:
-        httpd.serve_forever()
+        servers[0].serve_forever()
     finally:
         RUNNER.stop_all.set()
