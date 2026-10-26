@@ -24,28 +24,6 @@
     </div>
   </header>
 
-  <section class="sec" aria-labelledby="h-eng">
-    <div class="sh"><h2 id="h-eng">Research engine</h2><span class="sm" style="color:var(--faint);font-size:.8rem">Workers · search · AI · measured, not estimated</span></div>
-    <div class="inds" id="eng"></div>
-    <details style="margin-top:14px;border:1px solid var(--line-2);border-radius:10px;padding:12px 16px;color:var(--ink-2);line-height:1.55">
-      <summary style="cursor:pointer;color:var(--ink);font-weight:600">How the engine works, and how to use this dashboard</summary>
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:18px;margin-top:12px;font-size:.88rem">
-        <div><b style="color:var(--ink)">1 · Research (workers)</b><br>Background workers research each company in your list: they crawl the company's <i>own</i> website (home page, linked pages, sitemap and policy pages chosen by your ICP profile) and, if you enabled a search provider, run the profile's searches. Every page is cached, so requalifying never re-downloads anything.</div>
-        <div><b style="color:var(--ink)">2 · Qualification (your rules)</b><br>Your ICP profile defines the signals, which are mandatory, how they combine (AND / OR), what disqualifies an account and what evidence counts. Evidence must be quoted from a real page. Passages near warning words, blog/news pages, unfilled templates and vendor copy are rejected. Missing evidence is never counted as verified.</div>
-        <div><b style="color:var(--ink)">3 · Priority (A/B/C)</b><br>A qualified account gets A, B or C from your profile's priority rules (scale, fit score, key signals). Very large companies can be parked in a hold if your profile says so. The fit score explains every point it gives.</div>
-        <div><b style="color:var(--ink)">4 · AI (optional)</b><br>If you connect Claude Code, Codex or an API in Settings and turn AI on in the profile, it reviews accounts left in REVIEW. Code checks every quote word for word against the page. AI output is labelled UNVERIFIED and never changes a verdict.</div>
-        <div><b style="color:var(--ink)">5 · Evidence audit + outreach</b><br>An audit re-opens the cited page for each qualified account and confirms the quote is there (PASS / NEEDS REVIEW / FAIL). <b>Ready for outreach</b> = qualified A/B/C + fit verified + evidence on its own domain + audit PASS + not flagged, deduplicated across lists.</div>
-        <div><b style="color:var(--ink)">Using it</b><br>Click a <b>Pipeline</b> card to filter by status, or a <b>segment</b> card to filter by segment. <b>Filters</b> covers list, A/B/C, fit, use case, technology, competitor, triggers and channel. Click any row to see its evidence, source URL, reasons and history, and to edit the verdict. <b>Export</b> downloads exactly what you're viewing. <b>Final files</b> has the standard files plus a checksum manifest. The data refreshes every 30 s.</div>
-        <div><b style="color:var(--ink)">What the blocked counts mean</b><br><b>Retry · search blocked</b> = the company's own site had no proof yet and a needed search couldn't run (no provider, provider paused or capped). These accounts stay queued for a retry run. <b>No website</b> = no verified company site was found. Neither of these counts as research complete, and neither is ever counted as a disqualification.</div>
-      </div>
-    </details>
-  </section>
-
-  <section class="sec" aria-labelledby="h-ops">
-    <div class="sh"><h2 id="h-ops">Operations</h2><span class="sm" style="color:var(--faint);font-size:.8rem">Measured from the workspace database, search limiter and usage ledger · 30 s refresh</span></div>
-    <div class="inds" id="ops"></div>
-  </section>
-
   <section class="sec" aria-labelledby="h-list" style="display:none">
     <div class="sh"><h2 id="h-list">Source list</h2><span class="sm" style="color:var(--faint);font-size:.8rem">Uploaded lists</span></div>
     <div class="lists" id="lists"></div>
@@ -59,6 +37,20 @@
   <section class="sec" aria-labelledby="h-vert">
     <div class="sh"><h2 id="h-vert">Qualified by segment</h2><span class="sm" style="color:var(--faint);font-size:.8rem">Qualified A/B/C · ready for outreach · processed</span></div>
     <div class="verts" id="verts"></div>
+  </section>
+
+  <section class="sec" aria-labelledby="h-sgx">
+    <div class="sh"><h2 id="h-sgx">Signals</h2><span class="sm" style="color:var(--faint);font-size:.8rem">Click a signal to see the accounts with verified evidence, ranked by fit score</span></div>
+    <div class="inds" id="sgx"></div>
+    <form class="panel" id="sigForm" style="display:flex;flex-direction:column;gap:10px">
+      <h3 style="margin:0">Add a signal search</h3>
+      <div class="grid3"><label class="f">Signal name<input class="in" id="sgName" placeholder="e.g. Uses online booking" required></label>
+        <label class="f">Phrases to find on their website (comma separated)<input class="in" id="sgPats" placeholder="book online, schedule an appointment" required></label>
+        <label class="f">Role<select class="in" id="sgReq"><option value="preferred">Raises score (nice to have)</option><option value="mandatory">Must have to qualify</option><option value="negative">Counts against</option></select></label></div>
+      <div class="row"><label class="f" style="flex-direction:row;align-items:center;gap:8px">Weight <input class="in" id="sgW" type="number" min="0" max="100" value="15" style="width:90px"></label>
+        <button class="btn primary" type="submit" id="sgGo">Add and rescore all accounts</button><span class="small" id="sgMsg"></span></div>
+      <p class="small faint" style="margin:0">Rescoring re-reads the saved pages of every researched company (no re-download) and updates qualification, fit score and ranking.</p>
+    </form>
   </section>
 
   <section class="sec" aria-labelledby="h-sig" style="display:none">

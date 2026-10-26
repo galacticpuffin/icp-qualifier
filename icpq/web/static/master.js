@@ -10,7 +10,7 @@ const SORD = {READY:0,QUALIFIED:1,HOLD:2,REVIEW:3,RETRY:4,PENDING_WEBSITE:5,PEND
 const isQ = a => a.pr === "A" || a.pr === "B" || a.pr === "C";
 const dash = '<span style="color:var(--faint)">—</span>';
 let S = null, A = [], view = [], DET = {}, RULES = null;
-const st = {l:"", s:"Q", v:"", m:"", q:"", t:"", r:"", o:"", c:"", g:"", k:"", x:"", u:"", a:"", sort:"", dir:1, shown:PAGE, open:new Set()};
+const st = {sig:"", l:"", s:"Q", v:"", m:"", q:"", t:"", r:"", o:"", c:"", g:"", k:"", x:"", u:"", a:"", sort:"", dir:1, shown:PAGE, open:new Set()};
 const XF = {t:[["","All"],["TARGET TECH VERIFIED","Target technology verified"],["FIT VERIFIED ONLY","Fit verified only"],["NEEDS VERIFICATION","Needs verification"]],
   r:[["","All"],["Research complete","Research complete"],["BLOCKED","Blocked (search / no website)"],["Pending research","Pending research"]],
   o:[["","All"],["60","60+"],["40","40+"],["20","20+"]], c:[["","All"],["DIRECT","Direct prospects"],["CHANNEL / PARTNER","Channel / partner"]],
@@ -123,7 +123,7 @@ function counts(){
     $("vr-" + k).textContent = r.filter(a => a.stage === "READY").length;
     const pr = r.filter(a => a.stage !== "PENDING");
     $("vp-" + k).textContent = `${fmt(pr.length)} processed · Review ${fmt(pr.filter(a => a.stage === "REVIEW").length)} · Retry ${fmt(pr.filter(a => a.stage === "RETRY").length)} · Hold ${pr.filter(a => a.stage === "HOLD").length} · DQ ${fmt(pr.filter(a => a.stage === "DQ").length)}`; });
-  panels(recs); recon(); health(); facts(); engine(); ops();
+  panels(recs); recon(); health(); facts(); signals(recs);
 }
 function panels(recs){
   const sig = {}, ind = {};
@@ -196,6 +196,32 @@ function facts(){
     `<div class="wide"><dt>Live updates</dt><dd>This page reads this workspace's research database every 30 seconds. Workers keep running in the background after you close the page. Other workspaces' data is never mixed in.</dd></div>`;
 }
 
+/* signals panel: verified / inferred counts per profile signal; click = accounts with that signal, ranked by fit score */
+function signals(recs){
+  const pid = String(st.l ? (S.lists[st.l].profile_id || S.default_profile) : S.default_profile);
+  const sigs = ((S.profiles[pid] || {}).signals) || [];
+  const live = recs.filter(a => a.stage !== "MERGED");
+  $("sgx").innerHTML = sigs.length ? sigs.map(g => { const v = live.filter(a => (a.sids || []).includes(g.id)).length, i = live.filter(a => (a.sidi || []).includes(g.id)).length;
+    return `<button class="ind" type="button" data-sig="${esc(g.id)}" style="cursor:pointer;text-align:left;font:inherit;color:inherit;${st.sig === g.id ? "border-color:var(--accent-line);background:var(--accent-soft)" : ""}"><span>${esc(g.label)}<br><span style="color:var(--faint);font-size:.74rem">${esc({mandatory:"must have",preferred:"raises score",negative:"counts against",info:"recorded"}[g.req] || g.req)} · weight ${g.weight} · ${i} inferred</span></span><b>${fmt(v)}</b></button>`; }).join("")
+    : '<div class="ind"><span>No signals in this profile yet</span><b>0</b></div>';
+  $("sgx").querySelectorAll("[data-sig]").forEach(b => b.onclick = () => { st.sig = st.sig === b.dataset.sig ? "" : b.dataset.sig; if (st.sig) { st.sort = "opp"; st.dir = 1; } setView("ALL", ""); counts(); });
+}
+$("sigForm").addEventListener("submit", async e => {
+  e.preventDefault(); const m = $("sgMsg"); m.className = "small"; m.textContent = "Saving…";
+  try {
+    const pid = st.l ? (S.lists[st.l].profile_id || S.default_profile) : S.default_profile;
+    const prof = await api("/api/profiles/" + pid);
+    const cfg = prof.config, label = $("sgName").value.trim();
+    cfg.signals.push({id: label.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "").slice(0, 40) + "_" + (cfg.signals.length + 1), label, category: "other",
+      patterns: $("sgPats").value.split(",").map(x => x.trim()).filter(Boolean), markers: [], requirement: $("sgReq").value, weight: +$("sgW").value || 0});
+    await api("/api/profiles/" + pid, {method: "PUT", body: {config: cfg, note: "signal search added: " + label}});
+    const lists = Object.entries(S.lists).filter(([, x]) => (x.profile_id || S.default_profile) === pid).map(([k]) => +k);
+    for (const lid of lists) await api("/api/runs", {method: "POST", body: {list_id: lid, profile_id: pid, mode: "requalify"}});
+    m.className = "small okt"; m.textContent = `Added. Rescoring ${lists.length} list${lists.length === 1 ? "" : "s"}; results update here automatically.`; $("sgName").value = ""; $("sgPats").value = "";
+    lastGen = ""; setTimeout(load, 3000);
+  } catch (err) { m.className = "small err"; m.textContent = err.message; }
+});
+
 /* filtering */
 function matchS(a){
   switch (st.s){
@@ -240,6 +266,7 @@ function compute(){
     if (st.k && !has("cc", st.k)) continue;
     if (st.x && !has("vend", st.x)) continue;
     if (st.u && !has("uc", st.u)) continue;
+    if (st.sig && !(a.sids || []).includes(st.sig)) continue;
     out.push(a);
   }
   if (st.sort) out.sort((a, b) => { const x = sval(a, st.sort), y = sval(b, st.sort); return (x < y ? -1 : x > y ? 1 : 0) * st.dir; });
@@ -323,7 +350,7 @@ function render(){
   view = compute();
   const vlabel = (st.l ? LL[st.l] + " · " : "All lists · ") + (st.v ? VL[st.v] : "All segments");
   const extra = [st.m === "YES" ? LBL.core + " only" : st.m === "NO" ? "Not verified" : "", st.q.trim() ? `Matching “${st.q.trim()}”` : "",
-    st.t, st.r, st.o ? "Fit score " + st.o + "+" : "", st.c, st.g ? "Verified buying trigger" : "", st.a ? "AI candidate " + st.a.toLowerCase() : "", st.k, st.x, st.u].filter(Boolean).map(esc);
+    st.t, st.r, st.o ? "Fit score " + st.o + "+" : "", st.c, st.g ? "Verified buying trigger" : "", st.sig ? "Signal: " + (((S.profiles[String(S.default_profile)] || {}).signals || []).find(g => g.id === st.sig) || {label: st.sig}).label + " · ranked by fit score" : "", st.a ? "AI candidate " + st.a.toLowerCase() : "", st.k, st.x, st.u].filter(Boolean).map(esc);
   $("ttl").innerHTML = `${esc(vlabel)} — ${fmt(view.length)} ${esc(TITLE[st.s])} ${view.length === 1 ? "Record" : "Records"}` + (extra.length ? `<small>${extra.join(" · ")}</small>` : "");
   const exp = $("exp"); exp.textContent = `Export ${fmt(view.length)} CSV`; exp.disabled = !view.length; $("expx").disabled = !view.length;
   const nonDefault = (st.s !== "Q") + (!!st.v) + (!!st.m) + (!!st.l) + ["t","r","o","c","g","k","x","u","a"].filter(k => st[k]).length;
@@ -386,7 +413,7 @@ function openPop(on){ pop.hidden = !on; fBtn.setAttribute("aria-expanded", on);
     ck("fl-" + (st.l || "ALL")); ck("fs-" + st.s); ck("fv-" + (st.v || "ALL")); ck("fm-" + (st.m || "ALL")); } }
 fBtn.onclick = () => openPop(pop.hidden);
 $("fDone").onclick = () => { openPop(false); fBtn.focus(); };
-$("fReset").onclick = () => { st.m = ""; st.l = ""; for (const id of ["t","r","o","c","g","k","x","u","a"]) st[id] = ""; counts(); setView("Q", ""); openPop(true); };
+$("fReset").onclick = () => { st.sig = ""; st.m = ""; st.l = ""; for (const id of ["t","r","o","c","g","k","x","u","a"]) st[id] = ""; counts(); setView("Q", ""); openPop(true); };
 pop.addEventListener("change", e => {
   if (e.target.name === "fl"){ st.l = e.target.value; $("lpick").value = st.l; counts(); setView(st.s, st.v); }
   if (e.target.name === "fs") setView(e.target.value, st.v);

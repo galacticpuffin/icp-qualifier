@@ -123,6 +123,7 @@ def build(ws, app=None, runner_info=None):
                  missing=", ".join(jload(r["missing"], []) or []) if v else "", pid=r["vpid"] or default_pid,
                  sigv=", ".join(x["label"] for x in sigs.values() if x.get("status") == "VERIFIED"),
                  sigi=", ".join(x["label"] for x in sigs.values() if x.get("status") == "INFERRED"),
+                 sids=[k for k, x in sigs.items() if x.get("status") == "VERIFIED"], sidi=[k for k, x in sigs.items() if x.get("status") == "INFERRED"],
                  opp=(v["fit_score"] if v else None), oppx="; ".join(f"{c} {'+' if p >= 0 else ''}{p}: {w}" for c, p, w in (jload(r["score_parts"], []) or [])) if v else "",
                  cc=", ".join(jload(r["tech"], []) or []) if v else "", cci=", ".join((jload(r["tech_mentions"], []) or [])[:3]) if v else "",
                  vend=", ".join(jload(r["competitors"], []) or []) if v else "", chan=(v["channel"] if v else "") or "", chs=(v["channel_score"] if v else 0) or 0,
@@ -194,7 +195,8 @@ def build(ws, app=None, runner_info=None):
     for pid, c in cfgs.items():
         summary["profiles"][str(pid)] = {"name": c["name"], "labels": c["labels"], "segments": [[s["key"], s["label"]] for s in c["segments"]] + [["GENERAL", "General"]],
                                          "has_target_tech": bool(c["target_technology"]), "describe_priority": c["priority"]["describe"],
-                                         "hold_enabled": c["hold"]["enabled"]}
+                                         "hold_enabled": c["hold"]["enabled"],
+                                         "signals": [{"id": x["id"], "label": x["label"], "req": x["requirement"], "weight": x["weight"]} for x in c["signals"]]}
     summary["default_profile"] = default_pid
     summary["READY_deduped"] = sum(a["stage"] == "READY" for a in accts)
     summary["ops"] = ops_status(ws, app, runner_info)
