@@ -1,0 +1,333 @@
+{
+ "icp_qualifier_profile": 1,
+ "config": {
+  "schema": 1,
+  "name": "Acme Telematics ICP",
+  "company": {
+   "name": "Acme Telematics",
+   "sells": "GPS fleet tracking",
+   "website": ""
+  },
+  "market": "Logistics / fleet / transportation",
+  "ideal_customer": "",
+  "labels": {
+   "core": "Operates a vehicle fleet verified",
+   "use_case": "Signal / use case",
+   "stack": "Tech / competitor",
+   "target_tech": "Target technology",
+   "hold": "Enterprise Hold",
+   "tagline": "Acme Telematics \u00b7 GPS fleet tracking"
+  },
+  "targeting": {
+   "industries": [],
+   "exclude_industries": [],
+   "employees_min": null,
+   "employees_max": null,
+   "revenue_min": null,
+   "revenue_max": null,
+   "locations": [],
+   "location_required": false,
+   "out_of_range": "DQ"
+  },
+  "segments": [
+   {
+    "key": "TRUCKING",
+    "label": "Trucking & freight",
+    "patterns": [
+     "truck",
+     "freight",
+     "transport"
+    ]
+   },
+   {
+    "key": "FIELD",
+    "label": "Field services",
+    "patterns": [
+     "hvac",
+     "plumbing",
+     "electrical",
+     "pest",
+     "landscap"
+    ]
+   },
+   {
+    "key": "CONSTRUCTION",
+    "label": "Construction",
+    "patterns": [
+     "construction",
+     "contractor"
+    ]
+   },
+   {
+    "key": "DELIVERY",
+    "label": "Delivery",
+    "patterns": [
+     "delivery",
+     "courier",
+     "logistics"
+    ]
+   }
+  ],
+  "signals": [
+   {
+    "id": "fleet",
+    "label": "Operates a vehicle fleet",
+    "category": "operational",
+    "patterns": [
+     "our fleet",
+     "fleet of",
+     "service vans"
+    ],
+    "markers": [],
+    "requirement": "mandatory",
+    "weight": 20,
+    "use_case": "Operates a vehicle fleet",
+    "confidence": "medium",
+    "description": "",
+    "scope": "own_site",
+    "action": "SCORE"
+   },
+   {
+    "id": "drivers_hiring",
+    "label": "Hiring drivers",
+    "category": "buying",
+    "patterns": [
+     "now hiring drivers",
+     "cdl"
+    ],
+    "markers": [],
+    "requirement": "preferred",
+    "weight": 15,
+    "use_case": "Hiring drivers",
+    "confidence": "medium",
+    "description": "",
+    "scope": "own_site",
+    "action": "SCORE"
+   },
+   {
+    "id": "uses_competitor",
+    "label": "Uses a competitor",
+    "category": "competitor",
+    "patterns": [
+     "Samsara"
+    ],
+    "markers": [],
+    "requirement": "preferred",
+    "weight": 10,
+    "use_case": "Competitive displacement",
+    "confidence": "medium",
+    "scope": "own_site",
+    "action": "SCORE",
+    "description": ""
+   }
+  ],
+  "use_cases": [],
+  "gate": {
+   "mode": "all_mandatory",
+   "expression": "",
+   "require_use_case": false,
+   "min_mandatory_hits": 1
+  },
+  "negative_context": [
+   "scam",
+   "phishing",
+   "fraudulent",
+   "we will never",
+   "never ask you",
+   "do not respond to"
+  ],
+  "disqualifiers": [
+   {
+    "id": "agency",
+    "label": "Agencies & consultancies",
+    "field": "industry",
+    "patterns": [
+     "advertising services",
+     "marketing services",
+     "business consulting"
+    ],
+    "action": "DQ"
+   }
+  ],
+  "competitors": [
+   "Samsara"
+  ],
+  "technologies": [],
+  "target_technology": [],
+  "hold": {
+   "enabled": false,
+   "revenue_min": 6000000000.0,
+   "employees_min": 10001.0
+  },
+  "scale": {
+   "large": {
+    "revenue_min": 500000000.0,
+    "employees_min": 1001.0
+   },
+   "meaningful": {
+    "revenue_min": 50000000.0,
+    "employees_min": 201.0
+   }
+  },
+  "priority": {
+   "rules": [
+    {
+     "tier": "A",
+     "scale": "large",
+     "min_score": 0,
+     "require_any": []
+    },
+    {
+     "tier": "B",
+     "scale": "meaningful",
+     "min_score": 0,
+     "require_any": []
+    },
+    {
+     "tier": "C",
+     "scale": "any",
+     "min_score": 0,
+     "require_any": []
+    }
+   ],
+   "describe": {
+    "A": "Verified fit + strong scale",
+    "B": "Verified fit + meaningful scale",
+    "C": "Verified fit; scale not established"
+   }
+  },
+  "scoring": {
+   "tech_points": 20,
+   "tech_mention_points": 8,
+   "competitor_points": 10,
+   "trigger_points": 15,
+   "scale_large": 20,
+   "scale_meaningful": 10,
+   "confidence_points": 5,
+   "core_points": 30
+  },
+  "evidence": {
+   "own_domain_required": true,
+   "exclude_content_pages": true,
+   "require_marker_for_ready": false,
+   "min_confidence": "medium",
+   "audit": true,
+   "content_paths": [
+    "blog",
+    "blogs",
+    "news",
+    "newsroom",
+    "press",
+    "articles",
+    "learn",
+    "resources",
+    "insights",
+    "guides",
+    "community",
+    "forum",
+    "forums",
+    "podcast",
+    "webinars",
+    "stories",
+    "magazine",
+    "case-studies",
+    "case-study",
+    "careers",
+    "jobs"
+   ],
+   "vendor_copy": [
+    "your customers",
+    "your clients",
+    "for businesses",
+    "for agencies"
+   ]
+  },
+  "research": {
+   "max_pages": 18,
+   "link_budget": 8,
+   "link_hints": [
+    "fleet",
+    "careers",
+    "drivers",
+    "services",
+    "about",
+    "safety",
+    "locations",
+    "contact",
+    "privacy",
+    "terms"
+   ],
+   "sitemap_hints": [],
+   "common_paths": [
+    "/about",
+    "/contact",
+    "/privacy",
+    "/terms"
+   ],
+   "search_queries": [],
+   "search_when": "never",
+   "discover_websites": false,
+   "politeness_s": 0.6
+  },
+  "channel": {
+   "patterns": [
+    "reseller",
+    "partner program",
+    "white label",
+    "white-label",
+    "managed service provider",
+    "msp",
+    "value added reseller",
+    "systems integrator"
+   ],
+   "label": "Channel / partner"
+  },
+  "committee": {
+   "titles": [],
+   "departments": [],
+   "persona_default": "Operations leader"
+  },
+  "angles": {
+   "default": "Lead with the verified need",
+   "with_tech": "Integrate with {tech}",
+   "with_competitor": "Displace or complement {competitor}",
+   "channel": "Partner programme"
+  },
+  "export": {
+   "columns": [
+    "list",
+    "name",
+    "domain",
+    "stage",
+    "pr",
+    "sms",
+    "uc",
+    "vert",
+    "ev",
+    "url",
+    "conf",
+    "status",
+    "hold",
+    "missing",
+    "sigv",
+    "scale",
+    "just",
+    "eas",
+    "eaq",
+    "opp",
+    "oppx",
+    "cc",
+    "vend",
+    "trig",
+    "angle",
+    "persona",
+    "buyer",
+    "at"
+   ]
+  },
+  "ai": {
+   "use": "off",
+   "notes": ""
+  }
+ }
+}

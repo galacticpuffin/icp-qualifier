@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Setup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="/static/orig.css">
+<link rel="stylesheet" href="/static/app.css">
+</head><body>
+<div class="wrap">
+  <main class="wiz" style="max-width:520px;margin-top:6vh">
+    <div class="brandrow"><span class="mono">IQ</span><span class="sep"></span><h1 class="brand">ICP QUALIFIER · SETUP</h1></div>
+    <p class="whelp">Create the first admin account. The one-time setup code is printed in the server log and saved in <code>data/SETUP_CODE</code>.</p>
+    <form class="panel" id="f" style="display:flex;flex-direction:column;gap:12px">
+      <label class="f">Setup code<input class="in" id="c" autocomplete="off" required></label>
+      <label class="f">Your name<input class="in" id="n"></label>
+      <label class="f">E-mail<input class="in" id="e" type="email" autocomplete="username" required></label>
+      <label class="f">Password (10+ characters)<input class="in" id="p" type="password" autocomplete="new-password" required></label>
+      <label class="f">Workspace name<input class="in" id="w" placeholder="e.g. Acme Sales"></label>
+      <button class="btn primary" type="submit">Create account</button><span class="small err" id="m"></span>
+    </form>
+  </main>
+</div>
+<script src="/static/common.js"></script>
+<script src="/static/auth.js"></script>
+</body></html>

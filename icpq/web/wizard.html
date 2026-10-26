@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>New ICP</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="/static/orig.css">
+<link rel="stylesheet" href="/static/app.css">
+</head><body>
+<div class="wrap">
+  <nav class="nav" id="nav" aria-label="Main"></nav>
+  <main class="wiz">
+    <div class="sh"><h2>ICP setup · about 5 minutes</h2><button class="link" id="restart" type="button">Start over</button></div>
+    <div class="wprog"><span id="wstep">1 / 15</span><div class="bar" aria-hidden="true"><i id="wbar"></i></div><span id="wtopic"></span></div>
+    <section class="panel" id="card" aria-live="polite">
+      <p class="bubble" id="qprompt">Loading…</p>
+      <p class="whelp" id="qhelp"></p>
+      <div id="qbody" style="margin-top:16px;display:flex;flex-direction:column;gap:12px"></div>
+      <div class="wnav">
+        <button class="btn" id="back" type="button">Back</button>
+        <span class="faint small" id="saved">Answers are saved as you go</span>
+        <div class="row"><button class="link" id="skip" type="button">Skip</button><button class="btn primary" id="next" type="button">Next</button></div>
+      </div>
+    </section>
+    <p class="faint small">Every suggestion is optional and editable. Nothing is locked in: you can change any rule later and requalify without re-downloading anything.</p>
+  </main>
+</div>
+<script src="/static/common.js"></script>
+<script src="/static/wizard.js"></script>
+</body></html>

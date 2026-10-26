@@ -1,0 +1,439 @@
+{
+ "icp_qualifier_profile": 1,
+ "config": {
+  "schema": 1,
+  "name": "MsgCo ICP",
+  "company": {
+   "name": "MsgCo",
+   "sells": "SMS routing",
+   "website": ""
+  },
+  "market": "Customer messaging / communications",
+  "ideal_customer": "",
+  "labels": {
+   "core": "Own text-message programme verified",
+   "use_case": "Signal / use case",
+   "stack": "Tech / competitor",
+   "target_tech": "Target technology",
+   "hold": "Enterprise Hold",
+   "tagline": "MsgCo \u00b7 SMS routing"
+  },
+  "targeting": {
+   "industries": [],
+   "exclude_industries": [],
+   "employees_min": null,
+   "employees_max": null,
+   "revenue_min": null,
+   "revenue_max": null,
+   "locations": [],
+   "location_required": false,
+   "out_of_range": "DQ"
+  },
+  "segments": [
+   {
+    "key": "FINANCIAL_SERVICES",
+    "label": "Financial Services",
+    "patterns": [
+     "bank",
+     "credit",
+     "insurance",
+     "financial"
+    ]
+   },
+   {
+    "key": "HIGHER_ED",
+    "label": "Higher Education",
+    "patterns": [
+     "higher education",
+     "university",
+     "college"
+    ]
+   },
+   {
+    "key": "HEALTHCARE",
+    "label": "Healthcare",
+    "patterns": [
+     "hospital",
+     "health",
+     "medical",
+     "dental"
+    ]
+   },
+   {
+    "key": "GOVERNMENT_MUNICIPAL",
+    "label": "Government / Municipal",
+    "patterns": [
+     "government",
+     "public safety",
+     "municipal"
+    ]
+   }
+  ],
+  "signals": [
+   {
+    "id": "sms_program",
+    "label": "Own text-message programme",
+    "category": "behavioral",
+    "patterns": [
+     "text alerts",
+     "text message alerts",
+     "sms alerts",
+     "text reminders",
+     "re:\\btext\\s+[\"'\u201c]?\\w{2,15}[\"'\u201d]?\\s+to\\s+\\d{5,6}\\b",
+     "consent to receive text",
+     "agree to receive text",
+     "re:\\breply\\s+[\"'\u201c]?stop\\b",
+     "msg & data rates",
+     "message and data rates",
+     "sms terms"
+    ],
+    "markers": [
+     "reply stop",
+     "reply help",
+     "msg & data rates",
+     "message and data rates",
+     "message frequency varies",
+     "re:\\btext\\s+\\w{2,15}\\s+to\\s+\\d{5,6}\\b",
+     "short code"
+    ],
+    "requirement": "mandatory",
+    "weight": 30,
+    "use_case": "Text programme",
+    "confidence": "medium",
+    "description": "",
+    "scope": "own_site",
+    "action": "SCORE"
+   },
+   {
+    "id": "two_way",
+    "label": "Two-way texting with customers",
+    "category": "behavioral",
+    "patterns": [
+     "text us at",
+     "text us anytime",
+     "chat by text",
+     "two-way texting"
+    ],
+    "markers": [],
+    "requirement": "preferred",
+    "weight": 10,
+    "use_case": "Customer service",
+    "confidence": "medium",
+    "description": "",
+    "scope": "own_site",
+    "action": "SCORE"
+   },
+   {
+    "id": "contact_center",
+    "label": "Runs a contact center",
+    "category": "operational",
+    "patterns": [
+     "contact center",
+     "call center",
+     "customer care center"
+    ],
+    "markers": [],
+    "requirement": "preferred",
+    "weight": 10,
+    "use_case": "Contact center",
+    "confidence": "medium",
+    "description": "",
+    "scope": "own_site",
+    "action": "SCORE"
+   },
+   {
+    "id": "otp",
+    "label": "Verification codes by text",
+    "category": "technology",
+    "patterns": [
+     "re:\\b(?:verification|security|one-time)\\s+(?:pass)?code\\b.{0,60}\\b(?:text|sms)\\b"
+    ],
+    "markers": [],
+    "requirement": "preferred",
+    "weight": 10,
+    "use_case": "OTP/authentication",
+    "confidence": "medium",
+    "description": "",
+    "scope": "own_site",
+    "action": "SCORE"
+   },
+   {
+    "id": "uses_competitor",
+    "label": "Uses a competitor",
+    "category": "competitor",
+    "patterns": [
+     "TextVendor"
+    ],
+    "markers": [],
+    "requirement": "preferred",
+    "weight": 10,
+    "use_case": "Competitive displacement",
+    "confidence": "medium",
+    "scope": "own_site",
+    "action": "SCORE",
+    "description": ""
+   }
+  ],
+  "use_cases": [
+   {
+    "tag": "Appointment reminders",
+    "patterns": [
+     "appointment",
+     "reminder"
+    ]
+   },
+   {
+    "tag": "Payment reminders",
+    "patterns": [
+     "payment",
+     "billing",
+     "past due"
+    ]
+   },
+   {
+    "tag": "Emergency alerts",
+    "patterns": [
+     "emergency",
+     "closure",
+     "weather"
+    ]
+   },
+   {
+    "tag": "Marketing offers",
+    "patterns": [
+     "offers",
+     "promo",
+     "deals",
+     "discount"
+    ]
+   },
+   {
+    "tag": "Account notifications",
+    "patterns": [
+     "balance",
+     "fraud",
+     "transaction",
+     "account alert"
+    ]
+   }
+  ],
+  "gate": {
+   "mode": "all_mandatory",
+   "expression": "",
+   "require_use_case": false,
+   "min_mandatory_hits": 1
+  },
+  "negative_context": [
+   "scam",
+   "phishing",
+   "fraudulent",
+   "we will never",
+   "never ask you",
+   "do not respond to",
+   "smish",
+   "phish",
+   "fraudulent text",
+   "never text",
+   "crisis text line",
+   "hotline"
+  ],
+  "disqualifiers": [
+   {
+    "id": "competitor",
+    "label": "Competitors / vendors of what I sell",
+    "field": "name",
+    "patterns": [
+     "TextVendor"
+    ],
+    "action": "DQ"
+   }
+  ],
+  "competitors": [
+   "TextVendor"
+  ],
+  "technologies": [],
+  "target_technology": [],
+  "hold": {
+   "enabled": false,
+   "revenue_min": 6000000000.0,
+   "employees_min": 10001.0
+  },
+  "scale": {
+   "large": {
+    "revenue_min": 500000000.0,
+    "employees_min": 1001.0
+   },
+   "meaningful": {
+    "revenue_min": 50000000.0,
+    "employees_min": 201.0
+   }
+  },
+  "priority": {
+   "rules": [
+    {
+     "tier": "A",
+     "scale": "large",
+     "min_score": 0,
+     "require_any": []
+    },
+    {
+     "tier": "B",
+     "scale": "meaningful",
+     "min_score": 0,
+     "require_any": []
+    },
+    {
+     "tier": "C",
+     "scale": "any",
+     "min_score": 0,
+     "require_any": []
+    }
+   ],
+   "describe": {
+    "A": "Verified fit + strong scale",
+    "B": "Verified fit + meaningful scale",
+    "C": "Verified fit; scale not established"
+   }
+  },
+  "scoring": {
+   "tech_points": 20,
+   "tech_mention_points": 8,
+   "competitor_points": 10,
+   "trigger_points": 15,
+   "scale_large": 20,
+   "scale_meaningful": 10,
+   "confidence_points": 5,
+   "core_points": 30
+  },
+  "evidence": {
+   "own_domain_required": true,
+   "exclude_content_pages": true,
+   "require_marker_for_ready": true,
+   "min_confidence": "high",
+   "audit": true,
+   "content_paths": [
+    "blog",
+    "blogs",
+    "news",
+    "newsroom",
+    "press",
+    "articles",
+    "learn",
+    "resources",
+    "insights",
+    "guides",
+    "community",
+    "forum",
+    "forums",
+    "podcast",
+    "webinars",
+    "stories",
+    "magazine",
+    "case-studies",
+    "case-study",
+    "careers",
+    "jobs"
+   ],
+   "vendor_copy": [
+    "your customers",
+    "your clients",
+    "for businesses",
+    "for agencies"
+   ]
+  },
+  "research": {
+   "max_pages": 18,
+   "link_budget": 8,
+   "link_hints": [
+    "sms",
+    "text",
+    "alerts",
+    "notifications",
+    "privacy",
+    "terms",
+    "mobile",
+    "opt-in",
+    "contact",
+    "about"
+   ],
+   "sitemap_hints": [
+    "sms",
+    "text",
+    "alerts",
+    "notifications",
+    "opt-in"
+   ],
+   "common_paths": [
+    "/sms-terms",
+    "/privacy-policy",
+    "/terms",
+    "/text-messaging",
+    "/privacy"
+   ],
+   "search_queries": [],
+   "search_when": "never",
+   "discover_websites": false,
+   "politeness_s": 0.6
+  },
+  "channel": {
+   "patterns": [
+    "reseller",
+    "partner program",
+    "white label",
+    "white-label",
+    "managed service provider",
+    "msp",
+    "value added reseller",
+    "systems integrator"
+   ],
+   "label": "Channel / partner"
+  },
+  "committee": {
+   "titles": [],
+   "departments": [],
+   "persona_default": "Operations leader"
+  },
+  "angles": {
+   "default": "Lead with the verified need",
+   "with_tech": "Integrate with {tech}",
+   "with_competitor": "Displace or complement {competitor}",
+   "channel": "Partner programme"
+  },
+  "export": {
+   "columns": [
+    "list",
+    "name",
+    "domain",
+    "stage",
+    "pr",
+    "sms",
+    "uc",
+    "vert",
+    "ev",
+    "url",
+    "conf",
+    "status",
+    "hold",
+    "missing",
+    "sigv",
+    "scale",
+    "just",
+    "eas",
+    "eaq",
+    "opp",
+    "oppx",
+    "cc",
+    "vend",
+    "trig",
+    "angle",
+    "persona",
+    "buyer",
+    "at"
+   ]
+  },
+  "ai": {
+   "use": "off",
+   "notes": ""
+  }
+ }
+}

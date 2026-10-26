@@ -1,0 +1,10 @@
+services:
+  icpq:
+    build: .
+    image: icp-qualifier:1.0.0
+    ports: ["127.0.0.1:8890:8890"]      # local only; put a TLS reverse proxy in front before exposing it
+    env_file: [.env]
+    volumes: [icpq-data:/data]
+    restart: unless-stopped
+volumes:
+  icpq-data:

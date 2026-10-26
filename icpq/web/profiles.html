@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>ICP profiles</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="/static/orig.css">
+<link rel="stylesheet" href="/static/app.css">
+</head><body>
+<div class="wrap">
+  <nav class="nav" id="nav" aria-label="Main"></nav>
+  <section class="sec">
+    <div class="sh"><h2>ICP profiles</h2><a class="link" href="/wizard">+ New profile with the wizard</a></div>
+    <div class="inds" id="plist"></div>
+  </section>
+  <section class="sec hidden" id="pedit">
+    <div class="sh"><h2 id="ptitle">Profile</h2><span class="row"><button class="link" id="dup" type="button">Duplicate</button><a class="link" id="dl" href="#">Download JSON</a><button class="link" id="arch" type="button">Archive</button></span></div>
+    <div class="grid2">
+      <div class="panel"><h3>What the engine will do</h3><dl class="rules" id="rules"></dl><p class="err small" id="perr"></p></div>
+      <div class="panel" style="display:flex;flex-direction:column;gap:12px">
+        <h3>Edit the rules</h3>
+        <div class="row"><div class="seg" role="group" aria-label="Editor"><button type="button" id="tabForm" aria-pressed="true">Signals</button><button type="button" id="tabJson" aria-pressed="false">Everything (JSON)</button></div></div>
+        <div id="formEd"></div>
+        <textarea class="in code hidden" id="jsonEd" spellcheck="false" aria-label="Profile JSON"></textarea>
+        <label class="f">Change note<input class="in" id="note" placeholder="e.g. Added telehealth as preferred"></label>
+        <div class="row"><button class="btn" id="check" type="button">Check</button><button class="btn primary" id="saveP" type="button">Save new version</button><span class="small" id="pmsg"></span></div>
+        <div class="row"><span class="small muted">Then requalify a list with it:</span><select class="in" style="width:auto" id="rqList"></select><button class="btn" id="rq" type="button">Requalify (no re-download)</button></div>
+      </div>
+    </div>
+    <div class="panel"><h3>Try the rules on any text</h3>
+      <div class="grid3"><label class="f">Company<input class="in" id="tName" value="Example Co"></label><label class="f">Its website<input class="in" id="tDom" value="example.com"></label><label class="f">Page URL<input class="in" id="tUrl" value="https://example.com/terms"></label></div>
+      <label class="f" style="margin-top:10px">Page text<textarea class="in" id="tText" placeholder="Paste text from a prospect's web page"></textarea></label>
+      <div class="row" style="margin-top:10px"><button class="btn" id="tRun" type="button">Test</button><span class="small" id="tGate"></span></div>
+      <ul class="evl" id="tOut" style="margin-top:10px"></ul>
+    </div>
+    <div class="panel"><h3>Versions</h3><ul class="evl" id="vers"></ul></div>
+  </section>
+</div>
+<script src="/static/common.js"></script>
+<script src="/static/profiles.js"></script>
+</body></html>

@@ -1,0 +1,17 @@
+[project]
+name = "icp-qualifier"
+version = "1.0.0"
+description = "Industry-agnostic, ICP-driven account research and qualification dashboard"
+requires-python = ">=3.11"
+dependencies = []
+
+[tool.pytest.ini_options]
+pythonpath = [".", "tests"]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 200
+target-version = "py311"
+[tool.ruff.lint]
+select = ["E", "F", "W", "B"]
+ignore = ["E731", "B008", "E501", "B023"]

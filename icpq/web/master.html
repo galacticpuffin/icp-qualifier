@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>ICP Qualifier</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="/static/orig.css">
+<link rel="stylesheet" href="/static/app.css">
+</head><body>
+<div class="wrap">
+  <nav class="nav" id="nav" aria-label="Main"></nav>
+  <header class="head">
+    <div>
+      <div class="brandrow"><span class="mono" id="mono" aria-hidden="true">IQ</span><span class="sep" aria-hidden="true"></span><h1 class="brand" id="brand">ICP · MASTER</h1></div>
+      <p class="tag" id="tagline">One live view of your uploaded lists, qualified with your ICP profile</p>
+      <label class="lpick">Dashboard <select id="lpick" aria-label="Select list dashboard"><option value="">All lists</option></select></label>
+    </div>
+    <div class="health" id="health" aria-live="polite">Loading live data…</div>
+    <div class="prog num" aria-label="Research progress">
+      <div class="ph"><div class="lb">Accounts <span id="pul">All lists</span></div><div class="big huge" id="pu">—</div><div class="sm" id="pus"></div></div>
+      <div class="ph"><div class="lb">Processed <span>Engine finished the account</span></div><div class="big" id="p1">—</div><div class="bar" aria-hidden="true"><i id="p1b"></i></div><div class="sm" id="p1s"></div></div>
+      <div class="ph p2"><div class="lb">Research complete <span>Blocked searches &amp; missing websites not counted</span></div><div class="big" id="p2">—</div><div class="bar" aria-hidden="true"><i id="p2b"></i></div><div class="sm" id="p2s"></div></div>
+      <div class="ph all"><div class="lb">Ready for outreach <span>Verified evidence · deduplicated</span></div><div class="big" id="pa">—</div><div class="bar" aria-hidden="true"><i id="pab"></i></div><div class="sm" id="pas"></div></div>
+    </div>
+  </header>
+
+  <section class="sec" aria-labelledby="h-eng">
+    <div class="sh"><h2 id="h-eng">Research engine</h2><span class="sm" style="color:var(--faint);font-size:.8rem">Workers · search · AI · measured, not estimated</span></div>
+    <div class="inds" id="eng"></div>
+    <details style="margin-top:14px;border:1px solid var(--line-2);border-radius:10px;padding:12px 16px;color:var(--ink-2);line-height:1.55">
+      <summary style="cursor:pointer;color:var(--ink);font-weight:600">How the engine works, and how to use this dashboard</summary>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:18px;margin-top:12px;font-size:.88rem">
+        <div><b style="color:var(--ink)">1 · Research (workers)</b><br>Background workers research each company in your list: they crawl the company's <i>own</i> website (home page, linked pages, sitemap and policy pages chosen by your ICP profile) and, if you enabled a search provider, run the profile's searches. Every page is cached, so requalifying never re-downloads anything.</div>
+        <div><b style="color:var(--ink)">2 · Qualification (your rules)</b><br>Your ICP profile defines the signals, which are mandatory, how they combine (AND / OR), what disqualifies an account and what evidence counts. Evidence must be quoted from a real page. Passages near warning words, blog/news pages, unfilled templates and vendor copy are rejected. Missing evidence is never counted as verified.</div>
+        <div><b style="color:var(--ink)">3 · Priority (A/B/C)</b><br>A qualified account gets A, B or C from your profile's priority rules (scale, fit score, key signals). Very large companies can be parked in a hold if your profile says so. The fit score explains every point it gives.</div>
+        <div><b style="color:var(--ink)">4 · AI (optional)</b><br>If you connect Claude Code, Codex or an API in Settings and turn AI on in the profile, it reviews accounts left in REVIEW. Code checks every quote word for word against the page. AI output is labelled UNVERIFIED and never changes a verdict.</div>
+        <div><b style="color:var(--ink)">5 · Evidence audit + outreach</b><br>An audit re-opens the cited page for each qualified account and confirms the quote is there (PASS / NEEDS REVIEW / FAIL). <b>Ready for outreach</b> = qualified A/B/C + fit verified + evidence on its own domain + audit PASS + not flagged, deduplicated across lists.</div>
+        <div><b style="color:var(--ink)">Using it</b><br>Click a <b>Pipeline</b> card to filter by status, or a <b>segment</b> card to filter by segment. <b>Filters</b> covers list, A/B/C, fit, use case, technology, competitor, triggers and channel. Click any row to see its evidence, source URL, reasons and history, and to edit the verdict. <b>Export</b> downloads exactly what you're viewing. <b>Final files</b> has the standard files plus a checksum manifest. The data refreshes every 30 s.</div>
+        <div><b style="color:var(--ink)">What the blocked counts mean</b><br><b>Retry · search blocked</b> = the company's own site had no proof yet and a needed search couldn't run (no provider, provider paused or capped). These accounts stay queued for a retry run. <b>No website</b> = no verified company site was found. Neither of these counts as research complete, and neither is ever counted as a disqualification.</div>
+      </div>
+    </details>
+  </section>
+
+  <section class="sec" aria-labelledby="h-ops">
+    <div class="sh"><h2 id="h-ops">Operations</h2><span class="sm" style="color:var(--faint);font-size:.8rem">Measured from the workspace database, search limiter and usage ledger · 30 s refresh</span></div>
+    <div class="inds" id="ops"></div>
+  </section>
+
+  <section class="sec" aria-labelledby="h-list" style="display:none">
+    <div class="sh"><h2 id="h-list">Source list</h2><span class="sm" style="color:var(--faint);font-size:.8rem">Uploaded lists</span></div>
+    <div class="lists" id="lists"></div>
+  </section>
+
+  <section class="sec" aria-labelledby="h-pipe">
+    <div class="sh"><h2 id="h-pipe">Pipeline</h2><button class="link" id="defsBtn" type="button">What do these statuses mean?</button></div>
+    <div class="kpis" id="kpis"></div>
+  </section>
+
+  <section class="sec" aria-labelledby="h-vert">
+    <div class="sh"><h2 id="h-vert">Qualified by segment</h2><span class="sm" style="color:var(--faint);font-size:.8rem">Qualified A/B/C · ready for outreach · processed</span></div>
+    <div class="verts" id="verts"></div>
+  </section>
+
+  <section class="sec" aria-labelledby="h-sig" style="display:none">
+    <div class="sh"><h2 id="h-sig">Verified buying signals</h2><span class="sm" style="color:var(--faint);font-size:.8rem">Use cases on verified rows (qualified + hold)</span></div>
+    <div class="inds" id="sigs"></div>
+  </section>
+
+  <section class="sec" aria-labelledby="h-ind">
+    <div class="sh"><h2 id="h-ind">Industry breakdown</h2><span class="sm" style="color:var(--faint);font-size:.8rem">List industry · processed accounts · <em style="font-style:normal;color:var(--accent)">qualified</em></span></div>
+    <div class="inds" id="inds"></div>
+  </section>
+
+  <section class="results" aria-labelledby="ttl">
+    <div class="bar2">
+      <h2 class="ttl" id="ttl" aria-live="polite"></h2>
+      <input class="search" type="search" id="q" placeholder="Search company or domain" aria-label="Search accounts">
+      <div class="fwrap">
+        <button class="btn" id="fBtn" type="button" aria-expanded="false" aria-controls="pop">Filters <span class="badge" id="fBadge" hidden>1</span></button>
+        <div class="pop" id="pop" hidden>
+          <div><h3>List</h3><div class="opts" id="optL"></div></div>
+          <div><h3>Status</h3><div class="opts" id="optS"></div></div>
+          <div><h3>Segment</h3><div class="opts" id="optV"></div></div>
+          <div><h3 id="optMh">Fit verified</h3><div class="opts" id="optM"></div></div>
+          <div id="optTw"><h3 id="optTh">Target technology</h3><div class="opts" id="optT"></div></div>
+          <div><h3>Research status</h3><div class="opts" id="optR"></div></div>
+          <div><h3>Fit score</h3><div class="opts" id="optO"></div></div>
+          <div><h3>Channel vs direct</h3><div class="opts" id="optC"></div></div>
+          <div><h3>Buying trigger</h3><div class="opts" id="optG"></div></div>
+          <div><h3>AI candidate (unverified)</h3><div class="opts" id="optA"></div></div>
+          <div><h3>Technology (verified)</h3><div class="opts" id="optK"></div></div>
+          <div><h3>Competitor (verified)</h3><div class="opts" id="optX"></div></div>
+          <div><h3>Use case</h3><div class="opts" id="optU"></div></div>
+          <div class="popf"><button class="link" id="fReset" type="button">Reset to all qualified</button><button class="btn" id="fDone" type="button">Done</button></div>
+        </div>
+      </div>
+      <details class="btn" style="position:relative;display:inline-block"><summary style="cursor:pointer">Final files</summary><div class="pop" id="finals" style="position:absolute;right:0;z-index:20;min-width:320px;padding:10px;background:var(--bg);border:1px solid var(--line-2);border-radius:8px"></div></details>
+      <button class="btn" id="expx" type="button" title="Download the current view as Excel">XLSX</button>
+      <button class="btn primary" id="exp" type="button">Export CSV</button>
+    </div>
+    <div class="toast" id="toast" aria-live="polite"></div>
+    <div class="tbox"><table><thead><tr id="thead"></tr></thead><tbody id="tb"></tbody></table></div>
+    <div class="more" id="moreBox"><span id="shown"></span><button class="btn" id="more" type="button">Show 100 more</button></div>
+  </section>
+
+  <section class="sec" aria-labelledby="h-rec">
+    <div class="sh"><h2 id="h-rec">Source reconciliation — every original row has a visible state</h2></div>
+    <div class="recon-grid" id="recon"></div>
+  </section>
+
+  <details id="rdet">
+    <summary>Research details</summary>
+    <dl class="rd" id="rd"></dl>
+  </details>
+</div>
+
+<dialog id="defs" aria-labelledby="defsT">
+  <h3 id="defsT">What the statuses mean</h3>
+  <dl class="defs" id="defsList"></dl>
+  <div class="dfoot"><button class="btn" id="defsClose" type="button">Close</button></div>
+</dialog>
+<script src="/static/common.js"></script>
+<script src="/static/master.js"></script>
+</body></html>
